@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KeyVaultManager Multi-Storage Tester</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .panel {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 20px;
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .operation-panel {
+            min-width: 45%;
+        }
+        
+        .results-panel {
+            flex: 2;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        .tab-container {
+            margin-bottom: 20px;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+        
+        .tab-button {
+            background-color: #f1f1f1;
+            color: #333;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 4px 4px 0 0;
+            margin-right: 5px;
+        }
+        
+        .tab-button.active {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        #results {
+            white-space: pre-wrap;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            overflow: auto;
+            max-height: 500px;
+            min-height: 200px;
+        }
+        
+        .status {
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+        }
+        
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .storage-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+        
+        .default-badge {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .clienta-badge {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .clientb-badge {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .api-key-header {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #f2f2f2;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .file-actions {
+            display: flex;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>KeyVaultManager Multi-Storage Tester</h1>
+    
+    <div class="api-key-header">
+        <div>
+            <label for="apiKey">API Key:</label>
+            <input type="text" id="apiKey" value="api-key-mvp-2024">
+        </div>
+        <div>
+            <label for="licenseKey">License Key:</label>
+            <input type="text" id="licenseKey" value="keyvaultmanager-mvp-2024">
+        </div>
+        <div>
+            <label for="baseUrl">API URL:</label>
+            <input type="text" id="baseUrl" value="http://localhost:3000/api">
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="panel operation-panel">
+            <div class="tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-button active" onclick="openTab(event, 'keysTab')">Keys</button>
+                    <button class="tab-button" onclick="openTab(event, 'encryptTab')">Encrypt</button>
+                    <button class="tab-button" onclick="openTab(event, 'storageTab')">Storage</button>
+                </div>
+                
+                <!-- Keys Tab -->
+                <div id="keysTab" class="tab-content active">
+                    <h3>Generate Key</h3>
+                    <div class="form-group">
+                        <label for="keyName">Key Name:</label>
+                        <input type="text" id="keyName" value="my-test-key">
+                    </div>
+                    <div class="form-group">
+                        <label for="keyType">Key Type:</label>
+                        <select id="keyType">
+                            <option value="AES">AES</option>
+                            <option value="RSA">RSA</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="keyLength">Key Length:</label>
+                        <select id="keyLength">
+                            <option value="128">128 bits</option>
+                            <option value="192">192 bits</option>
+                            <option value="256" selected>256 bits</option>
+                        </select>
+                    </div>
+                    <button onclick="generateKey()">Generate Key</button>
+                    
+                    <h3>Retrieve Key</h3>
+                    <div class="form-group">
+                        <label for="retrieveKeyName">Key Name:</label>
+                        <input type="text" id="retrieveKeyName" value="my-test-key">
+                    </div>
+                    <button onclick="retrieveKey()">Retrieve Key</button>
+                </div>
+                
+                <!-- Encrypt Tab -->
+                <div id="encryptTab" class="tab-content">
+                    <h3>Encrypt Data</h3>
+                    <div class="form-group">
+                        <label for="encryptKeyName">Key Name:</label>
+                        <input type="text" id="encryptKeyName" value="my-test-key">
+                    </div>
+                    <div class="form-group">
+                        <label for="storageCode">Storage Location:</label>
+                        <select id="storageCode">
+                            <option value="">Default Storage</option>
+                            <option value="clienta">Client A</option>
+                            <option value="clientb">Client B</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="uploadFile">Upload File:</label>
+                        <input type="file" id="uploadFile">
+                    </div>
+                    <div class="form-group">
+                        <label for="textData">Or Enter Text Data:</label>
+                        <textarea id="textData" rows="5"></textarea>
+                    </div>
+                    <button onclick="encryptData()">Encrypt Data</button>
+                    
+                    <h3>Decrypt Data</h3>
+                    <div class="form-group">
+                        <label for="decryptKeyName">Key Name:</label>
+                        <input type="text" id="decryptKeyName" value="my-test-key">
+                    </div>
+                    <div class="form-group">
+                        <label for="decryptFile">Upload Encrypted File:</label>
+                        <input type="file" id="decryptFile">
+                    </div>
+                    <button onclick="decryptData()">Decrypt Data</button>
+                </div>
+                
+                <!-- Storage Tab -->
+                <div id="storageTab" class="tab-content">
+                    <h3>Storage Operations</h3>
+                    <button onclick="listStorageLocations()">List Storage Locations</button>
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label for="listStorageCode">Storage Location:</label>
+                        <select id="listStorageCode">
+                            <option value="">All Locations</option>
+                            <option value="default">Default Storage</option>
+                            <option value="clienta">Client A</option>
+                            <option value="clientb">Client B</option>
+                        </select>
+                    </div>
+                    <button onclick="listFiles()">List Files</button>
+                    
+                    <h3>Retrieve Document</h3>
+                    <div class="form-group">
+                        <label for="documentName">Document Name:</label>
+                        <input type="text" id="documentName" placeholder="example.enc">
+                    </div>
+                    <div class="form-group">
+                        <label for="retrieveDocKeyName">Key Name:</label>
+                        <input type="text" id="retrieveDocKeyName" value="my-test-key">
+                    </div>
+                    <div class="form-group">
+                        <label for="retrieveStorageCode">Storage Location:</label>
+                        <select id="retrieveStorageCode">
+                            <option value="">Default Storage</option>
+                            <option value="clienta">Client A</option>
+                            <option value="clientb">Client B</option>
+                        </select>
+                    </div>
+                    <button onclick="retrieveDocument()">Retrieve Document</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel results-panel">
+            <h2>Results</h2>
+            <div id="status"></div>
+            <div id="fileTable"></div>
+            <pre id="results">Results will appear here...</pre>
+        </div>
+    </div>
+    
+    <script>
+        // Tab functionality
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].classList.remove("active");
+            }
+            tablinks = document.getElementsByClassName("tab-button");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].classList.remove("active");
+            }
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+        
+        // Get API credentials
+        function getCredentials() {
+            return {
+                apiKey: document.getElementById('apiKey').value,
+                licenseKey: document.getElementById('licenseKey').value,
+                baseUrl: document.getElementById('baseUrl').value
+            };
+        }
+        
+        // Show status message
+        function showStatus(message, isError = false) {
+            const statusEl = document.getElementById('status');
+            statusEl.innerHTML = message;
+            statusEl.className = 'status ' + (isError ? 'error' : 'success');
+        }
+        
+        // Display results
+        function showResults(data) {
+            document.getElementById('results').textContent = 
+                typeof data === 'object' ? JSON.stringify(data, null, 2) : data;
+        }
+        
+        // Make API request
+        async function makeRequest(endpoint, method, data = null, isFormData = false) {
+            const creds = getCredentials();
+            const url = `${creds.baseUrl}${endpoint}`;
+            
+            const headers = {
+                'x-api-key': creds.apiKey,
+                'x-license-key': creds.licenseKey,
+            };
+            
+            if (!isFormData && method !== 'GET') {
+                headers['Content-Type'] = 'application/json';
+            }
+            
+            const options = {
+                method,
+                headers,
+            };
+            
+            if (data && method !== 'GET') {
+                options.body = isFormData ? data : JSON.stringify(data);
+            }
+            
+            try {
+                const response = await fetch(url, options);
+                
+                // Handle different content types
+                const contentType = response.headers.get('Content-Type');
+                
+                if (contentType && contentType.includes('application/json')) {
+                    const result = await response.json();
+                    return { ok: response.ok, data: result, response };
+                } else if (contentType && contentType.includes('application/octet-stream')) {
+                    const blob = await response.blob();
+                    return { ok: response.ok, data: blob, response };
+                } else {
+                    const text = await response.text();
+                    return { ok: response.ok, data: text, response };
+                }
+            } catch (error) {
+                return { ok: false, error: error.message };
+            }
+        }
+        
+        // --- API Functions ---
+        
+        // Generate Key
+        async function generateKey() {
+            const keyName = document.getElementById('keyName').value;
+            const keyType = document.getElementById('keyType').value;
+            const keyLength = parseInt(document.getElementById('keyLength').value);
+            
+            if (!keyName) {
+                showStatus('Key name is required', true);
+                return;
+            }
+            
+            showStatus('Generating key...');
+            
+            const result = await makeRequest('/generateKey', 'POST', {
+                keyName,
+                keyType,
+                keyLength
+            });
+            
+            if (result.ok) {
+                showStatus(`Key "${keyName}" generated successfully!`);
+                showResults(result.data);
+            } else {
+                showStatus(`Failed to generate key: ${result.error || 'Unknown error'}`, true);
+                showResults(result.data || result.error);
+            }
+        }
+        
+        // Retrieve Key
+        async function retrieveKey() {
+            const keyName = document.getElementById('retrieveKeyName').value;
+            
+            if (!keyName) {
+                showStatus('Key name is required', true);
+                return;
+            }
+            
+            showStatus('Retrieving key...');
+            
+            const result = await makeRequest('/retrieveKey', 'POST', {
+                keyName
+            });
+            
+            if (result.ok) {
+                showStatus(`Key "${keyName}" retrieved successfully!`);
+                showResults(result.data);
+            } else {
+                showStatus(`Failed to retrieve key: ${result.error || 'Unknown error'}`, true);
+                showResults(result.data || result.error);
+            }
+        }
+        
+        // Encrypt Data
+        async function encryptData() {
+            const keyName = document.getElementById('encryptKeyName').value;
+            const storageCode = document.getElementById('storageCode').value;
+            const file = document.getElementById('uploadFile').files[0];
+            const textData = document.getElementById('textData').value;
+            
+            if (!keyName) {
+                showStatus('Key name is required', true);
+                return;
+            }
+            
+            if (!file && !textData) {
+                showStatus('Either file or text data is required', true);
+                return;
+            }
+            
+            showStatus('Encrypting data...');
+            
+            const formData = new FormData();
+            formData.append('keyName', keyName);
+            formData.append('useStorage', 'true');
+            
+            if (storageCode) {
+                formData.append('storageCode', storageCode);
+            }
+            
+            if (file) {
+                formData.append('file', file);
+            } else {
+                formData.append('data', textData);
+            }
+            
+            const result = await makeRequest('/encrypt', 'POST', formData, true);
+            
+            if (result.ok) {
+                showStatus('Data encrypted successfully!');
+                
+                // If it's a blob, create download link
+                if (result.data instanceof Blob) {
+                    const url = URL.createObjectURL(result.data);
+                    const filename = result.response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'encrypted.enc';
+                    
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = url;
+                    downloadLink.download = filename;
+                    downloadLink.textContent = `Download encrypted file: ${filename}`;
+                    
+                    document.getElementById('results').innerHTML = '';
+                    document.getElementById('results').appendChild(downloadLink);
+                    
+                    // Show storage location info
+                    const storageLocation = result.response.headers.get('X-Storage-Code') || 'default';
+                    const storageInfo = document.createElement('p');
+                    storageInfo.innerHTML = `File stored in location: <span class="storage-badge ${storageLocation}-badge">${storageLocation}</span>`;
+                    document.getElementById('results').appendChild(storageInfo);
+                } else {
+                    showResults(result.data);
+                }
+            } else {
+                showStatus(`Failed to encrypt data: ${result.error || 'Unknown error'}`, true);
+                showResults(result.data || result.error);
+            }
+        }
+        
+        // Decrypt Data
+        async function decryptData() {
+            const keyName = document.getElementById('decryptKeyName').value;
+            const file = document.getElementById('decryptFile').files[0];
+            
+            if (!keyName) {
+                showStatus('Key name is required', true);
+                return;
+            }
+            
+            if (!file) {
+                showStatus('Encrypted file is required', true);
+                return;
+            }
+            
+            showStatus('Decrypting data...');
+            
+            const formData = new FormData();
+            formData.append('keyName', keyName);
+            formData.append('file', file);
+            
+            const result = await makeRequest('/decrypt', 'POST', formData, true);
+            
+            if (result.ok) {
+                showStatus('Data decrypted successfully!');
+                
+                // If it's a blob, create download link
+                if (result.data instanceof Blob) {
+                    const url = URL.createObjectURL(result.data);
+                    const filename = result.response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'decrypted_file';
+                    
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = url;
+                    downloadLink.download = filename;
+                    downloadLink.textContent = `Download decrypted file: ${filename}`;
+                    
+                    document.getElementById('results').innerHTML = '';
+                    document.getElementById('results').appendChild(downloadLink);
+                } else {
+                    showResults(result.data);
+                }
+            } else {
+                showStatus(`Failed to decrypt data: ${result.error || 'Unknown error'}`, true);
+                showResults(result.data || result.error);
+            }
+        }
+        
+        // List Storage Locations
+        async function listStorageLocations() {
+            showStatus('Loading storage locations...');
+            
+            const result = await makeRequest('/storageLocations', 'GET');
+            
+            if (result.ok) {
+                showStatus('Storage locations retrieved successfully!');
+                
+                if (result.data && result.data.success && result.data.storageLocations) {
+                    const locations = result.data.storageLocations;
+                    
+                    // Create storage location table
+                    let table = '<table><tr><th>Code</th><th>Description</th><th>Container</th><th>Default</th></tr>';
+                    
+                    locations.forEach(loc => {
+                        table += `<tr>
+                            <td><span class="storage-badge ${loc.code}-badge">${loc.code}</span></td>
+                            <td>${loc.description || 'N/A'}</td>
+                            <td>${loc.containerName}</td>
+                            <td>${loc.isDefault ? '✓' : ''}</td>
+                        </tr>`;
+                    });
+                    
+                    table += '</table>';
+                    
+                    document.getElementById('results').innerHTML = table;
+                } else {
+                    showResults(result.data);
+                }
+            } else {
+                showStatus(`Failed to retrieve storage locations: ${result.error || 'Unknown error'}`, true);
+                showResults(result.data || result.error);
+            }
+        }
+        
+        // List Files
+        async function listFiles() {
+            const storageCode = document.getElementById('listStorageCode').value;
+            let endpoint = '/listFiles';
+            
+            if (storageCode) {
+                endpoint += `?storageCode=${storageCode}`;
+            }
+            
+            showStatus('Loading files...');
+            
+            const result = await makeRequest(endpoint, 'GET');
+            
+            if (result.ok) {
+                showStatus('Files retrieved successfully!');
+                
+                if (result.data && result.data.success && result.data.files) {
+                    const files = result.data.files;
+                    
+                    if (files.length === 0) {
+                        document.getElementById('results').textContent = 'No files found in the selected storage location(s).';
+                        return;
+                    }
+                    
+                    // Create files table
+                    let table = '<table><tr><th>Name</th><th>Size</th><th>Storage</th><th>Actions</th></tr>';
+                    
+                    files.forEach(file => {
+                        // Get storage code from file data or use default
+                        const fileStorageCode = file.storageCode || 'default';
+                        
+                        table += `<tr>
+                            <td>${file.name}</td>
+                            <td>${formatFileSize(file.size)}</td>
+                            <td><span class="storage-badge ${fileStorageCode}-badge">${fileStorageCode}</span></td>
+                            <td class="file-actions">
+                                <button onclick="downloadFile('${file.name}', '${fileStorageCode}')">Download</button>
+                                <button onclick="retrieveDocumentWithParams('${file.name}', '${fileStorageCode}')">Decrypt</button>
+                            </td>
+                        </tr>`;
+                    });
+                    
+                    table += '</table>';
+                    
+                    document.getElementById('results').innerHTML = table;
+                } else {
+                    showResults(result.data);
+                }
+            } else {
+                showStatus(`Failed to retrieve files: ${result.error || 'Unknown error'}`, true);
+                showResults(result.data || result.error);
+            }
+        }
+        
+        // Helper to format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // Download File
+        async function downloadFile(fileName, storageCode) {
+            let endpoint = `/downloadFile/${fileName}`;
+            
+            if (storageCode && storageCode !== 'default') {
+                endpoint += `?storageCode=${storageCode}`;
+            }
+            
+            showStatus(`Downloading file ${fileName}...`);
+            
+            const result = await makeRequest(endpoint, 'GET');
+            
+            if (result.ok) {
+                showStatus('File downloaded successfully!');
+                
+                // If it's a blob, create download link
+                if (result.data instanceof Blob) {
+                    const url = URL.createObjectURL(result.data);
+                    
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = url;
+                    downloadLink.download = fileName;
+                    downloadLink.textContent = `Download file: ${fileName}`;
+                    
+                    document.getElementById('results').innerHTML = '';
+                    document.getElementById('results').appendChild(downloadLink);
+                } else {
+                    showResults(result.data);
+                }
+            } else {
+                showStatus(`Failed to download file: ${result.error || 'Unknown error'}`, true);
+                showResults(result.data || result.error);
+            }
+        }
+        
+        // Retrieve Document with parameters from file list
+        function retrieveDocumentWithParams(fileName, storageCode) {
+            document.getElementById('documentName').value = fileName;
+            document.getElementById('retrieveStorageCode').value = storageCode === 'default' ? '' : storageCode;
+            
+            // Switch to storage tab
+            document.querySelector('.tab-button[onclick*="storageTab"]').click();
+            
+            // Highlight retrieve document section
+            document.querySelector('h3:contains("Retrieve Document")').scrollIntoView();
+        }
+        
+        // Fix jQuery-like contains selector
+        HTMLElement.prototype.contains = function(text) {
+            return this.textContent.includes(text);
+        };
+        
+        // Retrieve and Decrypt Document
+        async function retrieveDocument() {
+            const documentName = document.getElementById('documentName').value;
+            const keyName = document.getElementById('retrieveDocKeyName').value;
+            const storageCode = document.getElementById('retrieveStorageCode').value;
+            
+            if (!documentName) {
+                showStatus('Document name is required', true);
+                return;
+            }
+            
+            if (!keyName) {
+                showStatus('Key name is required', true);
+                return;
+            }
+            
+            let endpoint = `/retrieveDocument?documentName=${encodeURIComponent(documentName)}&keyName=${encodeURIComponent(keyName)}`;
+            
+            if (storageCode) {
+                endpoint += `&storageCode=${encodeURIComponent(storageCode)}`;
+            }
+            
+            showStatus(`Retrieving and decrypting document ${documentName}...`);
+            
+            const result = await makeRequest(endpoint, 'GET');
+            
+            if (result.ok) {
+                showStatus('Document retrieved and decrypted successfully!');
+                
+                // If it's a blob, create download link
+                if (result.data instanceof Blob) {
+                    const url = URL.createObjectURL(result.data);
+                    const disposition = result.response.headers.get('Content-Disposition');
+                    let filename = documentName.replace('.enc', '');
+                    
+                    if (disposition && disposition.includes('filename=')) {
+                        filename = disposition.split('filename=')[1].replace(/"/g, '');
+                    }
+                    
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = url;
+                    downloadLink.download = filename;
+                    downloadLink.textContent = `Download decrypted document: ${filename}`;
+                    
+                    document.getElementById('results').innerHTML = '';
+                    document.getElementById('results').appendChild(downloadLink);
+                    
+                    // Add storage info
+                    const storageInfo = document.createElement('p');
+                    const storageLocation = storageCode || 'default';
+                    storageInfo.innerHTML = `Retrieved from storage location: <span class="storage-badge ${storageLocation}-badge">${storageLocation}</span>`;
+                    document.getElementById('results').appendChild(storageInfo);
+                } else {
+                    showResults(result.data);
+                }
+            } else {
+                showStatus(`Failed to retrieve document: ${result.error || 'Unknown error'}`, true);
+                showResults(result.data || result.error);
+            }
+        }
+        
+        // Initialize by loading storage locations
+        document.addEventListener('DOMContentLoaded', function() {
+            listStorageLocations();
+        });
+    </script>
+</body>
+</html> 

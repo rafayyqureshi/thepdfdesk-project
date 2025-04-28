@@ -1,0 +1,387 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --primary: #6366f1;
+    --primary-hover: #4f46e5;
+    --surface: #1e1e2f;
+    --surface-dark: #151523;
+    --surface-light: #2a2a3d;
+    --text: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --accent: #0ea5e9;
+    --error: #ef4444;
+    --success: #22c55e;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    transition: all 0.2s ease-in-out;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 20px;
+    background: linear-gradient(135deg, var(--surface) 0%, var(--surface-dark) 100%);
+    color: var(--text);
+    line-height: 1.6;
+}
+
+h1, h2 {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-align: center;
+}
+
+h1 {
+    font-size: 2.8rem;
+    margin-bottom: 30px;
+    font-weight: 700;
+}
+
+h2 {
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+}
+
+.section {
+    margin: 30px 0;
+    padding: 30px;
+    background: rgba(42, 42, 61, 0.7);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    overflow: hidden;
+    transform: translateY(0);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.section:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.45);
+}
+
+button {
+    display: inline-block;
+    padding: 12px 24px;
+    margin: 10px 0;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+    color: white;
+    transition: all 0.3s ease;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+button:disabled {
+    background: #374151;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent
+    );
+    transition: left 0.7s ease;
+}
+
+button:hover::before {
+    left: 100%;
+}
+
+textarea, input[type="text"], input[type="file"], select {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    font-size: 0.95rem;
+    font-family: 'Poppins', sans-serif;
+    transition: all 0.3s ease;
+}
+
+textarea:focus, input[type="text"]:focus, select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+    outline: none;
+}
+
+input[type="file"] {
+    padding: 10px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+input[type="file"]::-webkit-file-upload-button {
+    background: var(--primary);
+    border: none;
+    padding: 8px 16px;
+    cursor: pointer;
+    color: white;
+    border-radius: 6px;
+    margin-right: 10px;
+    transition: all 0.3s ease;
+}
+
+input[type="file"]::-webkit-file-upload-button:hover {
+    background: var(--primary-hover);
+}
+
+.response {
+    background: rgba(15, 23, 42, 0.6);
+    padding: 20px;
+    margin-top: 15px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    white-space: pre-wrap;
+    font-family: 'Monaco', monospace;
+    color: var(--text);
+    max-height: 300px;
+    overflow-y: auto;
+    font-size: 0.9rem;
+    position: relative;
+}
+
+.response.error {
+    border-left: 4px solid var(--error);
+    color: var(--error);
+}
+
+.response.success {
+    border-left: 4px solid var(--success);
+}
+
+.metrics {
+    margin-top: 15px;
+    padding: 12px;
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.select-wrapper {
+    margin-bottom: 20px;
+}
+
+.select-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--primary);
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.info-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 6px;
+}
+
+.file-info {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 6px;
+}
+
+.checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+}
+
+.storage-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+}
+
+.storage-label {
+    color: var(--text);
+    font-size: 0.95rem;
+}
+
+/* File list styling */
+.file-item {
+    margin-bottom: 12px;
+    padding: 15px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.file-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateX(4px);
+}
+
+.file-name {
+    color: var(--primary);
+    font-weight: 500;
+}
+
+.file-details {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-top: 6px;
+}
+
+.file-actions {
+    margin-top: 10px;
+}
+
+.file-actions button {
+    padding: 6px 16px;
+    font-size: 0.9rem;
+    width: auto;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-hover);
+}
+
+/* Add these styles to your existing CSS */
+select {
+    width: 100%;
+    padding: 14px;
+    margin: 8px 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    font-size: 1rem;
+    font-family: 'Poppins', sans-serif;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e2e8f0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1em;
+    padding-right: 2.5rem;
+}
+
+select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+    outline: none;
+    transform: translateY(-1px);
+}
+
+/* Style for the options */
+select option {
+    background-color: var(--surface-dark);
+    color: var(--text);
+    padding: 12px;
+}
+
+/* Hover state for options */
+select option:hover {
+    background-color: var(--primary);
+}
+
+/* Selected option */
+select option:checked {
+    background-color: var(--primary);
+    color: white;
+}
+
+/* Firefox specific styles */
+@-moz-document url-prefix() {
+    select {
+        color: var(--text);
+        background-color: var(--surface-dark);
+    }
+    
+    select option {
+        background-color: var(--surface-dark);
+    }
+}
+
+/* Edge and IE specific styles */
+@media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
+    select {
+        padding-right: 0;
+        background-image: none;
+    }
+}
+
+/* Webkit specific styles */
+select::-webkit-scrollbar {
+    width: 8px;
+}
+
+select::-webkit-scrollbar-track {
+    background: var(--surface-dark);
+}
+
+select::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 4px;
+}
+
+/* Disabled state */
+select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+

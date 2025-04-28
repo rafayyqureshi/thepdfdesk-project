@@ -1,0 +1,1017 @@
+<!-- File: public/index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KeyVaultManager</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <h1><i class="fas fa-shield-alt"></i> KeyVaultManager</h1>
+
+    <!-- Generate Key Section -->
+    <div class="section">
+      <h2><i class="fas fa-key"></i> Generate Key</h2>
+      <div class="select-wrapper">
+          <label class="select-label">Key Name</label>
+          <input type="text" id="keyName" placeholder="Enter key name (e.g., MegaBankKey)">
+          <p class="info-text">Provide a unique name to identify your key</p>
+      </div>
+      <div class="select-wrapper">
+          <label class="select-label">Key Type</label>
+          <select id="keyType" onchange="updateKeyLengthOptions()">
+              <option value="AES">AES - For document encryption</option>
+              <option value="RSA">RSA - For asymmetric encryption</option>
+              <option value="EC">EC - Elliptic Curve for secure asymmetric encryption</option>
+          </select>
+          <p class="info-text" id="keyTypeInfo">AES is recommended for document encryption</p>
+      </div>
+      <div class="select-wrapper" id="keyLengthWrapper">
+          <label class="select-label" id="keyLengthLabel">Key Length</label>
+          <select id="keyLength">
+              <!-- Options will be populated by JavaScript -->
+          </select>
+          <p class="info-text" id="keyLengthInfo">Select the appropriate key length for your security needs</p>
+      </div>
+      <button onclick="generateKey()">Generate Key</button>
+      <div id="generateKeyResponse" class="response"></div>
+  </div>
+
+    <!-- Retrieve Key Section -->
+    <div class="section">
+        <h2><i class="fas fa-search"></i> Retrieve Key</h2>
+        <div class="select-wrapper">
+            <label class="select-label">Key Name</label>
+            <input type="text" id="retrieveKeyName" placeholder="Enter key name">
+            <p class="info-text">Enter the key name to retrieve its details</p>
+        </div>
+        <button onclick="retrieveKey()">Retrieve Key</button>
+        <div id="retrieveKeyResponse" class="response"></div>
+    </div>
+
+    <!-- Encrypt Section -->
+    <div class="section">
+        <h2><i class="fas fa-lock"></i> Encrypt</h2>
+        <div class="select-wrapper">
+            <label class="select-label">Key Name</label>
+            <input type="text" id="encryptKeyName" placeholder="Enter key name">
+        </div>
+        <div class="select-wrapper" style="display: none;">
+            <label class="select-label">Text Input</label>
+            <textarea id="textToEncrypt" placeholder="Enter text to encrypt"></textarea>
+        </div>
+        <div class="select-wrapper">
+            <label class="select-label">File Input</label>
+            <input type="file" id="fileToEncrypt">
+            <p class="file-info">Maximum file size: 50MB</p>
+        </div>
+
+        <div class="select-wrapper">
+            <label class="select-label">Storage Options</label>
+            <div class="checkbox-wrapper">
+                <input type="checkbox" id="useStorage" name="useStorage" class="storage-checkbox">
+                <label for="useStorage" class="storage-label">Store in Azure Blob Storage</label>
+            </div>
+        </div>
+    
+        <button onclick="encrypt()">Encrypt</button>
+        <div id="encryptResponse" class="response"></div>
+        <div id="encryptMetrics" class="metrics"></div>
+    </div>
+    
+    <style>
+    .checkbox-wrapper {
+        margin: 10px 0;
+        display: flex;
+        align-items: center;
+    }
+    
+    .storage-checkbox {
+        margin-right: 10px;
+        width: auto;
+    }
+    
+    .storage-label {
+        color: #d1d1e0;
+        font-size: 0.9rem;
+    }
+    </style>
+
+
+        <!-- <button onclick="encrypt()">Encrypt</button> -->
+        <div id="encryptResponse" class="response"></div>
+        <div id="encryptMetrics" class="metrics"></div>
+    </div>    
+
+    <!-- Decrypt Section -->
+    <div class="section">
+        <h2><i class="fas fa-unlock"></i> Decrypt</h2>
+        <div class="select-wrapper">
+            <label class="select-label">Key Name</label>
+            <input type="text" id="decryptKeyName" placeholder="Enter key name">
+        </div>
+        <div class="select-wrapper" style="display: none;">
+            <label class="select-label">Encrypted Text</label>
+            <textarea id="textToDecrypt" placeholder="Enter encrypted data (JSON format)"></textarea>
+        </div>
+        <div class="select-wrapper">
+            <label class="select-label">Encrypted File</label>
+            <input type="file" id="fileToDecrypt" accept=".enc">
+            <p class="file-info">Select an encrypted file (.enc)</p>
+        </div>
+        <button onclick="decrypt()">Decrypt</button>
+        <div id="decryptResponse" class="response"></div>
+        <div id="decryptMetrics" class="metrics"></div>
+    </div>
+
+    <div class="section">
+        <h2><i class="fas fa-cloud-upload-alt"></i> Storage Status</h2>
+        <div class="select-wrapper">
+            <label class="select-label">Stored Files</label>
+            <button onclick="listStoredFiles()" class="mb-4">Refresh Storage List</button>
+            <div id="storageResponse" class="response">
+                <!-- Files will be listed here -->
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        .file-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        
+        .file-item:hover {
+            background-color: rgba(42, 42, 61, 0.8) !important;
+        }
+        
+        .file-name {
+            color: #ff9e45;
+        }
+        
+        .file-details {
+            font-size: 0.9em;
+            color: #8888a0;
+            margin-top: 4px;
+        }
+        
+        .file-actions button {
+            font-size: 0.9em;
+            background-color: #ff9e45;
+            color: white;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .file-actions button:hover {
+            background-color: #e08835;
+        }
+    </style>
+
+    <div class="section">
+        <h2><i class="fas fa-user-secret"></i> Manage Secrets</h2>
+        
+        <!-- Create Secret -->
+        <div class="select-wrapper">
+            <label class="select-label">Secret Name</label>
+            <input type="text" id="secretName" placeholder="Enter secret name">
+            <p class="info-text">Provide a unique name for your secret</p>
+        </div>
+        <div class="select-wrapper">
+            <label class="select-label">Secret Value</label>
+            <textarea id="secretValue" placeholder="Enter secret value"></textarea>
+            <p class="info-text">Enter the value to store securely</p>
+        </div>
+        <button onclick="createSecret()">Store Secret</button>
+        <div id="createSecretResponse" class="response"></div>
+
+        <!-- Retrieve Secret -->
+        <div class="select-wrapper">
+            <label class="select-label">Secret Name</label>
+            <input type="text" id="retrieveSecretName" placeholder="Enter secret name">
+            <p class="info-text">Enter the secret name to retrieve</p>
+        </div>
+        <button onclick="retrieveSecret()">Retrieve Secret</button>
+        <div id="retrieveSecretResponse" class="response"></div>
+    </div>
+
+    <script>
+        async function listStoredFiles() {
+            const responseElement = document.getElementById('storageResponse');
+            responseElement.textContent = 'Loading files...';
+            
+            try {
+                console.log('Fetching storage list...');
+                const response = await fetch('/api/listFiles', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'x-api-key': API_KEY,
+                        'x-license-key': LICENSE_KEY
+                    }
+                });
+
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Response error:', errorText);
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Storage list response:', data);
+                
+                if (data.files && data.files.length > 0) {
+                    console.log(`Found ${data.files.length} files`);
+                    const fileList = data.files
+                        .map(file => {
+                            console.log('Processing file:', file);
+                            const date = new Date(file.timestamp).toLocaleString();
+                            const size = formatFileSize(file.size);
+                            return `
+                                <div class="file-item">
+                                    <div class="file-name">${file.name}</div>
+                                    <div class="file-info">
+                                        Size: ${size} | Created: ${date}
+                                        ${file.metadata ? `| Key: ${file.metadata.keyName || 'Unknown'}` : ''}
+                                    </div>
+                                    <div class="file-actions">
+                                        <button onclick="downloadStoredFile('${file.name}')" class="download-btn">
+                                            Download
+                                        </button>
+                                    </div>
+                                </div>`;
+                        })
+                        .join('');
+
+                    responseElement.innerHTML = `
+                        <div class="storage-list">
+                            <div class="storage-header">Files in storage:</div>
+                            ${fileList}
+                        </div>`;
+                } else {
+                    console.log('No files found in response');
+                    responseElement.innerHTML = '<div class="no-files">No files found in storage</div>';
+                }
+            } catch (error) {
+                console.error('Storage list error:', error);
+                responseElement.innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Add download function for stored files
+        async function downloadStoredFile(fileName) {
+            try {
+                const response = await fetch(`/api/downloadFile/${fileName}`, {
+                    method: 'GET',
+                    headers: {
+                        'x-api-key': API_KEY,
+                        'x-license-key': LICENSE_KEY
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Download failed: ${response.status}`);
+                }
+
+                // Create blob from response
+                const blob = await response.blob();
+                
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName.replace('.enc', ''); // Remove .enc extension if present
+                document.body.appendChild(a);
+                a.click();
+                
+                // Cleanup
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } catch (error) {
+                console.error('Download error:', error);
+                alert(`Failed to download file: ${error.message}`);
+            }
+        }
+
+        // Helper function to format file sizes
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Add event listener for the refresh button
+        document.addEventListener('DOMContentLoaded', function() {
+            const refreshButton = document.querySelector('button[onclick="listStoredFiles()"]');
+            if (refreshButton) {
+                refreshButton.addEventListener('click', listStoredFiles);
+            }
+
+            // Initial load of files
+            listStoredFiles();
+        });
+        
+        async function createSecret() {
+            const button = event.target;
+            const responseElement = document.getElementById('createSecretResponse');
+            try {
+                button.disabled = true;
+
+                const secretName = document.getElementById('secretName').value.trim();
+                const secretValue = document.getElementById('secretValue').value.trim();
+                
+                if (!secretName || !secretValue) {
+                    throw new Error('Secret name and value are required');
+                }
+
+                console.log('Sending request:', { secretName, secretValue }); // Debug log
+
+                const response = await fetch('/api/createSecret', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'x-api-key': API_KEY,
+                        'x-license-key': LICENSE_KEY
+                    },
+                    body: JSON.stringify({
+                        secretName,
+                        secretValue
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    console.error('Error response:', errorData); // Debug log
+                    throw new Error(errorData);
+                }
+
+                const data = await response.json();
+                responseElement.textContent = JSON.stringify(data, null, 2);
+                responseElement.className = 'response success';
+            } catch (error) {
+                responseElement.textContent = `Error: ${error.message}`;
+                responseElement.className = 'response error';
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        async function retrieveSecret() {
+            const button = event.target;
+            const responseElement = document.getElementById('retrieveSecretResponse');
+            try {
+                button.disabled = true;
+
+                const secretName = document.getElementById('retrieveSecretName').value.trim();
+                if (!secretName) throw new Error('Please enter a secret name');
+
+                console.log('Sending request:', { secretName }); // Debug log
+
+                const response = await fetch('/api/retrieveSecret', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'x-api-key': API_KEY,
+                        'x-license-key': LICENSE_KEY
+                    },
+                    body: JSON.stringify({ secretName })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    console.error('Error response:', errorData); // Debug log
+                    throw new Error(errorData);
+                }
+
+                const data = await response.json();
+                responseElement.textContent = JSON.stringify(data, null, 2);
+                responseElement.className = 'response success';
+            } catch (error) {
+                responseElement.textContent = `Error: ${error.message}`;
+                responseElement.className = 'response error';
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        async function retrieveKey() {
+            const button = event.target;
+            const responseElement = document.getElementById('retrieveKeyResponse');
+            try {
+                button.disabled = true;
+                showLoadingState(button, 'Retrieving...');
+                responseElement.textContent = 'Processing...';
+                responseElement.className = 'response';
+
+                const keyName = document.getElementById('retrieveKeyName').value.trim();
+                if (!keyName) throw new Error('Please enter a key name');
+
+                const response = await fetch('/api/retrieveKey', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'x-api-key': API_KEY,
+                        'x-license-key': LICENSE_KEY
+                    },
+                    body: JSON.stringify({ keyName })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Failed to retrieve key');
+
+                // Format the response nicely
+                responseElement.textContent = JSON.stringify(data, null, 2);
+                responseElement.className = 'response success';
+
+                // Auto-fill the key name in encryption and decryption sections
+                document.getElementById('encryptKeyName').value = keyName;
+                document.getElementById('decryptKeyName').value = keyName;
+
+                showNotification('Key retrieved successfully', 'success');
+
+            } catch (error) {
+                console.error('Key retrieval error:', error);
+                responseElement.textContent = `Error: ${error.message}`;
+                responseElement.className = 'response error';
+                showNotification(error.message, 'error');
+            } finally {
+                hideLoadingState(button, 'Retrieve Key');
+                button.disabled = false;
+            }
+        }
+
+    
+    </script>
+    
+    <script>
+const API_KEY = 'api-key-mvp-2024';
+const LICENSE_KEY = 'keyvaultmanager-mvp-2024';
+
+// Key configuration object
+const keyConfig = {
+    AES: {
+        lengths: [128, 256],
+        defaultLength: 256,
+        info: "AES is recommended for document encryption",
+        lengthLabel: "Key Length (bits)"
+    },
+    RSA: {
+        lengths: [2048, 3072, 4096],
+        defaultLength: 2048,
+        info: "RSA is suitable for asymmetric encryption and digital signatures",
+        lengthLabel: "Key Length (bits)"
+    },
+    EC: {
+        lengths: [2048],  // Using RSA-2048 for EC
+        defaultLength: 2048,
+        info: "EC provides strong security for digital signatures",
+        lengthLabel: "Key Length (bits)"
+    }
+};
+
+// Initialize key length options on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateKeyLengthOptions();
+    // Initialize file input listeners
+    initializeFileInputs();
+});
+
+// Update key length options based on selected key type
+function updateKeyLengthOptions() {
+    const keyType = document.getElementById('keyType').value;
+    const keyLengthSelect = document.getElementById('keyLength');
+    const keyTypeInfo = document.getElementById('keyTypeInfo');
+    const keyLengthLabel = document.getElementById('keyLengthLabel');
+    
+    // Clear existing options
+    keyLengthSelect.innerHTML = '';
+    
+    // Update information text and label
+    keyTypeInfo.textContent = keyConfig[keyType].info;
+    keyLengthLabel.textContent = keyConfig[keyType].lengthLabel;
+    
+    // Add appropriate options based on key type
+    keyConfig[keyType].lengths.forEach(length => {
+        const option = document.createElement('option');
+        option.value = length;
+        
+        // Format display text based on key type
+        if (keyType === 'EC') {
+            option.textContent = length; // For EC, just show the curve name
+        } else {
+            option.textContent = `${length}-bit`;
+        }
+        
+        if (length === keyConfig[keyType].defaultLength) {
+            option.selected = true;
+        }
+        keyLengthSelect.add(option);
+    });
+
+    // Debug log
+    console.log('Updated key length options for:', keyType);
+    console.log('Available options:', keyConfig[keyType].lengths);
+}
+
+// Make sure to initialize the options when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    updateKeyLengthOptions();
+    // Add change event listener to key type dropdown
+    document.getElementById('keyType').addEventListener('change', updateKeyLengthOptions);
+});
+
+// Add event listener for key type change
+document.getElementById('keyType').addEventListener('change', updateKeyLengthOptions);
+
+async function generateKey() {
+    const button = event.target;
+    const responseElement = document.getElementById('generateKeyResponse');
+    try {
+        button.disabled = true;
+        showLoadingState(button, 'Generating...');
+        responseElement.textContent = 'Processing...';
+        responseElement.className = 'response';
+
+        const keyName = document.getElementById('keyName').value.trim();
+        const keyType = document.getElementById('keyType').value;
+        const keyLength = document.getElementById('keyLength').value;
+
+        if (!keyName) throw new Error('Please enter a key name');
+
+        // Now we'll treat EC keys just like RSA keys
+        const payload = {
+            keyName,
+            keyType,
+            keyLength: parseInt(keyLength)  // Parse as integer for all types
+        };
+
+        const response = await fetch('/api/generateKey', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': API_KEY,
+                'x-license-key': LICENSE_KEY
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to generate key');
+
+        responseElement.textContent = JSON.stringify(data, null, 2);
+        responseElement.className = 'response success';
+
+        document.getElementById('encryptKeyName').value = keyName;
+        document.getElementById('decryptKeyName').value = keyName;
+
+    } catch (error) {
+        responseElement.textContent = `Error: ${error.message}`;
+        responseElement.className = 'response error';
+    } finally {
+        hideLoadingState(button, 'Generate Key');
+        button.disabled = false;
+    }
+}
+
+function validateKeyParameters(keyType, keyLength) {
+    if (!keyConfig[keyType]) {
+        throw new Error(`Invalid key type: ${keyType}`);
+    }
+
+    if (keyType === 'EC') {
+        if (!keyConfig.EC.curves.includes(keyLength)) {
+            throw new Error(`Invalid EC curve: ${keyLength}`);
+        }
+    } else {
+        const lengthNum = parseInt(keyLength);
+        if (!keyConfig[keyType].lengths.includes(lengthNum)) {
+            throw new Error(`Invalid key length for ${keyType}: ${keyLength}`);
+        }
+    }
+}
+
+// ... [Previous helper functions remain the same] ...
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+function showLoadingState(element, loadingText) {
+    element.originalText = element.textContent;
+    element.textContent = loadingText;
+    element.classList.add('loading');
+}
+
+function hideLoadingState(element, originalText) {
+    element.textContent = originalText || element.originalText;
+    element.classList.remove('loading');
+}
+
+async function encrypt() {
+    const button = event.target;
+    const responseElement = document.getElementById('encryptResponse');
+    const metricsElement = document.getElementById('encryptMetrics');
+    
+    try {
+        button.disabled = true;
+        showLoadingState(button, 'Encrypting...');
+        responseElement.textContent = 'Processing...';
+        responseElement.className = 'response';
+        
+        const keyName = document.getElementById('encryptKeyName').value.trim();
+        const useStorage = document.getElementById('useStorage').checked;
+
+        if (!keyName) throw new Error('Please enter a key name');
+
+        const formData = new FormData();
+        formData.append('keyName', keyName);
+        formData.append('useStorage', useStorage.toString());
+
+        const fileInput = document.getElementById('fileToEncrypt');
+        const textInput = document.getElementById('textToEncrypt').value.trim();
+
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            validateFileSize(file);
+            formData.append('file', file);
+        } else if (textInput) {
+            formData.append('data', textInput);
+        } else {
+            throw new Error('Please provide either text or a file to encrypt');
+        }
+
+        const response = await fetch('/api/encrypt', {
+            method: 'POST',
+            headers: {
+                'x-api-key': API_KEY,
+                'x-license-key': LICENSE_KEY
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Encryption failed');
+        }
+
+        const result = await response.json();
+        handleEncryptionResult(result, fileInput, keyName, useStorage, responseElement);
+
+        // Clear inputs and show success message
+        clearEncryptionInputs(fileInput);
+        showNotification('Encryption completed successfully', 'success');
+        metricsElement.textContent = 'Encryption completed successfully';
+        
+    } catch (error) {
+        console.error('Encryption error:', error);
+        responseElement.textContent = `Error: ${error.message}`;
+        responseElement.className = 'response error';
+        metricsElement.textContent = '';
+        showNotification(error.message, 'error');
+    } finally {
+        hideLoadingState(button, 'Encrypt');
+        button.disabled = false;
+    }
+}
+
+function validateFileSize(file) {
+    const maxSize = 100 * 1024 * 1024; // 100MB
+    if (file.size > maxSize) {
+        throw new Error(`File size exceeds limit of ${formatFileSize(maxSize)}`);
+    }
+}
+
+function handleEncryptionResult(result, fileInput, keyName, useStorage, responseElement) {
+    if (useStorage) {
+        responseElement.textContent = `File encrypted and stored successfully: ${result.storageDetails?.fileName || 'unnamed'}`;
+        responseElement.className = 'response success';
+        listStoredFiles();
+    } else {
+        if (result.encryptedData) {
+            if (fileInput.files.length > 0) {
+                downloadEncryptedFile(result, fileInput.files[0].name);
+                responseElement.textContent = `File encrypted successfully: ${fileInput.files[0].name}.enc`;
+            } else {
+                const formattedResult = formatEncryptionResult(result);
+                responseElement.textContent = JSON.stringify(formattedResult, null, 2);
+                document.getElementById('decryptKeyName').value = keyName;
+                document.getElementById('textToDecrypt').value = JSON.stringify(formattedResult);
+            }
+            responseElement.className = 'response success';
+        }
+    }
+}
+
+function downloadEncryptedFile(result, originalFileName) {
+    const blob = new Blob([JSON.stringify(result)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${originalFileName}.enc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function formatEncryptionResult(result) {
+    return {
+        iv: result.encryptedData.iv,
+        encryptedData: result.encryptedData.encryptedData,
+        keyType: result.encryptedData.encryptionType,
+        originalSize: result.encryptedData.originalSize,
+        encryptedSize: result.encryptedData.encryptedSize,
+        duration: 1
+    };
+}
+
+function clearEncryptionInputs(fileInput) {
+    if (fileInput.files.length > 0) {
+        fileInput.value = '';
+    } else {
+        document.getElementById('textToEncrypt').value = '';
+    }
+}
+
+async function decrypt() {
+    const button = event.target;
+    const responseElement = document.getElementById('decryptResponse');
+    const metricsElement = document.getElementById('decryptMetrics');
+    
+    try {
+        button.disabled = true;
+        showLoadingState(button, 'Decrypting...');
+        responseElement.textContent = 'Processing...';
+        responseElement.className = 'response';
+
+        const keyName = document.getElementById('decryptKeyName').value.trim();
+        if (!keyName) throw new Error('Please enter a key name');
+
+        const formData = new FormData();
+        formData.append('keyName', keyName);
+
+        const fileInput = document.getElementById('fileToDecrypt');
+        const textInput = document.getElementById('textToDecrypt').value.trim();
+
+        if (fileInput.files.length > 0) {
+            await handleFileDecryption(formData, fileInput, responseElement);
+        } else if (textInput) {
+            await handleTextDecryption(formData, textInput, responseElement);
+        } else {
+            throw new Error('Please provide either encrypted text or a file to decrypt');
+        }
+
+        showNotification('Decryption completed successfully', 'success');
+        metricsElement.textContent = 'Decryption completed successfully';
+        
+    } catch (error) {
+        console.error('Decryption error:', error);
+        responseElement.textContent = `Error: ${error.message}`;
+        responseElement.className = 'response error';
+        metricsElement.textContent = '';
+        showNotification(error.message, 'error');
+    } finally {
+        hideLoadingState(button, 'Decrypt');
+        button.disabled = false;
+    }
+}
+
+async function handleFileDecryption(formData, fileInput, responseElement) {
+    formData.append('file', fileInput.files[0]);
+    
+    const response = await fetch('/api/decrypt', {
+        method: 'POST',
+        headers: {
+            'x-api-key': API_KEY,
+            'x-license-key': LICENSE_KEY
+        },
+        body: formData
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Decryption failed');
+    }
+
+    await downloadDecryptedFile(response);
+    responseElement.textContent = `File decrypted successfully: ${getFileName(response)}`;
+    responseElement.className = 'response success';
+    fileInput.value = '';
+}
+
+async function handleTextDecryption(formData, textInput, responseElement) {
+    formData.append('data', textInput);
+    
+    const response = await fetch('/api/decrypt', {
+        method: 'POST',
+        headers: {
+            'x-api-key': API_KEY,
+            'x-license-key': LICENSE_KEY
+        },
+        body: formData
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Decryption failed');
+    }
+
+    const result = await response.json();
+    responseElement.textContent = result.decryptedData;
+    responseElement.className = 'response success';
+    document.getElementById('textToDecrypt').value = '';
+}
+
+async function downloadDecryptedFile(response) {
+    const blob = await response.blob();
+    const fileName = getFileName(response);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function getFileName(response) {
+    return response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'decrypted_file';
+}
+
+// Helper function for file size formatting
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Initialize file input handlers
+function initializeFileInputs() {
+    const fileInputs = ['fileToEncrypt', 'fileToDecrypt'];
+    fileInputs.forEach(inputId => {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.addEventListener('change', () => updateFileInfo(inputId));
+        }
+    });
+}
+
+function updateFileInfo(inputId) {
+    const file = document.getElementById(inputId).files[0];
+    if (file) {
+        const fileInfo = document.querySelector(`#${inputId} + .file-info`);
+        fileInfo.textContent = `Selected file: ${file.name} (${formatFileSize(file.size)})`;
+    }
+}
+
+// Storage file listing functionality
+async function listStoredFiles() {
+    const responseElement = document.getElementById('storageResponse');
+    responseElement.textContent = 'Loading files...';
+    
+    try {
+        const response = await fetch('/api/listFiles', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'x-api-key': API_KEY,
+                'x-license-key': LICENSE_KEY
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.files && data.files.length > 0) {
+            const fileList = data.files
+                .map(file => createFileListItem(file))
+                .join('');
+
+            responseElement.innerHTML = `
+                <div class="storage-list">
+                    <div class="storage-header">Files in storage:</div>
+                    ${fileList}
+                </div>`;
+        } else {
+            responseElement.innerHTML = '<div class="no-files">No files found in storage</div>';
+        }
+    } catch (error) {
+        console.error('Storage list error:', error);
+        responseElement.innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
+        showNotification(error.message, 'error');
+    }
+}
+
+function createFileListItem(file) {
+    const date = new Date(file.timestamp).toLocaleString();
+    const size = formatFileSize(file.size);
+    return `
+        <div class="file-item">
+            <div class="file-name">${file.name}</div>
+            <div class="file-info">
+                Size: ${size} | Created: ${date}
+                ${file.metadata ? `| Key: ${file.metadata.keyName || 'Unknown'}` : ''}
+            </div>
+            <div class="file-actions">
+                <button onclick="downloadStoredFile('${file.name}')" class="download-btn">
+                    Download
+                </button>
+            </div>
+        </div>`;
+}
+
+async function downloadStoredFile(fileName) {
+    try {
+        const response = await fetch(`/api/downloadFile/${fileName}`, {
+            method: 'GET',
+            headers: {
+                'x-api-key': API_KEY,
+                'x-license-key': LICENSE_KEY
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Download failed: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName.replace('.enc', '');
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        showNotification('File downloaded successfully', 'success');
+    } catch (error) {
+        console.error('Download error:', error);
+        showNotification(`Failed to download file: ${error.message}`, 'error');
+    }
+}
+
+// Handle file drag and drop
+function initializeDragAndDrop() {
+    const dropZones = document.querySelectorAll('.file-drop-zone');
+    
+    dropZones.forEach(zone => {
+        zone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            zone.classList.add('drag-over');
+        });
+
+        zone.addEventListener('dragleave', () => {
+            zone.classList.remove('drag-over');
+        });
+
+        zone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            zone.classList.remove('drag-over');
+            
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                const fileInput = zone.querySelector('input[type="file"]');
+                fileInput.files = e.dataTransfer.files;
+                updateFileInfo(fileInput.id);
+            }
+        });
+    });
+}
+
+// Initialize drag and drop functionality
+document.addEventListener('DOMContentLoaded', () => {
+    initializeDragAndDrop();
+});
+
+
+    </script>
+</body>
+</html>

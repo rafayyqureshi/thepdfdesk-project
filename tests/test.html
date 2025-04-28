@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDFdesk API Tester</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 0 20px; }
+        .section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px; margin: 10px 0; cursor: pointer; }
+        textarea { width: 100%; height: 100px; margin: 10px 0; }
+        .response { background: #f5f5f5; padding: 10px; margin-top: 10px; white-space: pre-wrap; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>PDFdesk API Tester</h1>
+    
+    <div class="section">
+        <h2>1. Generate Key</h2>
+        <select id="keyType">
+            <option value="AES">AES</option>
+            <option value="RSA">RSA</option>
+            <option value="EC">EC</option>
+        </select>
+        <select id="keyLength">
+            <option value="256">256</option>
+            <option value="128">128</option>
+            <option value="2048">2048</option>
+        </select>
+        <button onclick="generateKey()">Generate Key</button>
+        <div id="generateKeyResponse" class="response"></div>
+    </div>
+
+    <div class="section">
+        <h2>2. Encrypt Document</h2>
+        <textarea id="documentToEncrypt" placeholder="Enter text to encrypt"></textarea>
+        <input type="text" id="encryptKeyId" placeholder="Enter Key ID">
+        <select id="storageType">
+            <option value="false">Return Data</option>
+            <option value="true">Store in Blob</option>
+        </select>
+        <button onclick="encryptDocument()">Encrypt</button>
+        <div id="encryptResponse" class="response"></div>
+    </div>
+
+    <div class="section">
+        <h2>3. Decrypt Document</h2>
+        <textarea id="documentToDecrypt" placeholder="Enter encrypted data (JSON)"></textarea>
+        <input type="text" id="decryptKeyId" placeholder="Enter Key ID">
+        <button onclick="decryptDocument()">Decrypt</button>
+        <div id="decryptResponse" class="response"></div>
+    </div>
+
+    <div class="section">
+        <h2>4. Save Secret</h2>
+        <input type="text" id="secretName" placeholder="Secret Name">
+        <input type="text" id="secretValue" placeholder="Secret Value">
+        <button onclick="saveSecret()">Save Secret</button>
+        <div id="saveSecretResponse" class="response"></div>
+    </div>
+
+    <div class="section">
+        <h2>5. Retrieve Secret</h2>
+        <input type="text" id="retrieveSecretName" placeholder="Secret Name">
+        <button onclick="retrieveSecret()">Retrieve Secret</button>
+        <div id="retrieveSecretResponse" class="response"></div>
+    </div>
+
+    <script>
+        const API_KEY = 'api-key-mvp-2024';
+        const LICENSE_KEY = 'PDFdesk-MVP-2024';
+        const BASE_URL = 'http://localhost:3000/api';
+
+        const headers = {
+            'Content-Type': 'application/json',
+            'x-api-key': API_KEY,
+            'x-license-key': LICENSE_KEY
+        };
+
+        async function makeRequest(endpoint, method, body = null) {
+            try {
+                const response = await fetch(`${BASE_URL}${endpoint}`, {
+                    method,
+                    headers,
+                    body: body ? JSON.stringify(body) : null
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error);
+                return data;
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        async function generateKey() {
+            try {
+                const keyType = document.getElementById('keyType').value;
+                const keyLength = document.getElementById('keyLength').value;
+                
+                const data = await makeRequest('/generateKey', 'POST', { keyType, keyLength });
+                document.getElementById('generateKeyResponse').textContent = JSON.stringify(data, null, 2);
+                
+                if(data.keyId) {
+                    document.getElementById('encryptKeyId').value = data.keyId;
+                    document.getElementById('decryptKeyId').value = data.keyId;
+                }
+            } catch (error) {
+                document.getElementById('generateKeyResponse').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        async function encryptDocument() {
+            try {
+                const document = document.getElementById('documentToEncrypt').value;
+                const keyId = document.getElementById('encryptKeyId').value;
+                const storeInBlob = document.getElementById('storageType').value === 'true';
+                const keyType = document.getElementById('keyType').value;
+                
+                const data = await makeRequest('/encryptDocument', 'POST', {
+                    document,
+                    keyId,
+                    keyType,
+                    storeInBlob
+                });
+                
+                document.getElementById('encryptResponse').textContent = JSON.stringify(data, null, 2);
+                if(data.encryptedData) {
+                    document.getElementById('documentToDecrypt').value = JSON.stringify(data.encryptedData);
+                }
+            } catch (error) {
+                document.getElementById('encryptResponse').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        async function decryptDocument() {
+            try {
+                const encryptedData = JSON.parse(document.getElementById('documentToDecrypt').value);
+                const keyId = document.getElementById('decryptKeyId').value;
+                const keyType = document.getElementById('keyType').value;
+                
+                const data = await makeRequest('/decryptDocument', 'POST', {
+                    encryptedData,
+                    keyId,
+                    keyType
+                });
+                
+                document.getElementById('decryptResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('decryptResponse').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        async function saveSecret() {
+            try {
+                const secretName = document.getElementById('secretName').value;
+                const secretValue = document.getElementById('secretValue').value;
+                
+                const data = await makeRequest('/saveSecret', 'POST', {
+                    secretName,
+                    secretValue
+                });
+                
+                document.getElementById('saveSecretResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('saveSecretResponse').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        async function retrieveSecret() {
+            try {
+                const secretName = document.getElementById('retrieveSecretName').value;
+                
+                const data = await makeRequest('/retrieveSecret', 'POST', {
+                    secretName
+                });
+                
+                document.getElementById('retrieveSecretResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('retrieveSecretResponse').textContent = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

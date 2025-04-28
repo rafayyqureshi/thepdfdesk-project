@@ -1,0 +1,10 @@
+This is a test file for KeyVaultManager multi-storage functionality testing.
+
+It contains some sample text that will be encrypted and stored in different storage locations.
+
+The multi-storage implementation allows:
+- Storing files in different Azure blob containers
+- Retrieving files from specific storage locations
+- Listing files by storage location
+
+This file should be uploaded as part of the Postman collection testing. 

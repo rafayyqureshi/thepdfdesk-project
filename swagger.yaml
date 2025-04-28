@@ -1,0 +1,337 @@
+openapi: 3.0.0
+info:
+  title: KeyVaultManager API
+  description: API for managing encryption keys and performing encryption/decryption operations
+  version: 1.0.0
+  contact:
+    email: support@keyvaultmanager.com
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: API key (use 'api-key-mvp-2024')
+    LicenseKeyAuth:
+      type: apiKey
+      in: header
+      name: x-license-key
+      description: License key (use 'keyvaultmanager-mvp-2024')
+  
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+    KeyResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        name:
+          type: string
+        type:
+          type: string
+        value:
+          type: string
+        details:
+          type: object
+          properties:
+            storageType:
+              type: string
+            created:
+              type: string
+              format: date-time
+            enabled:
+              type: boolean
+
+security:
+  - ApiKeyAuth: []
+    LicenseKeyAuth: []
+
+paths:
+  /api/generateKey:
+    post:
+      tags:
+        - Keys
+      summary: Generate a new cryptographic key
+      description: Creates a new key with specified parameters
+      security:
+        - ApiKeyAuth: []
+          LicenseKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - keyName
+              properties:
+                keyName:
+                  type: string
+                  example: "my-test-key"
+                keyType:
+                  type: string
+                  enum: [AES, RSA, EC]
+                  default: AES
+                  example: "AES"
+                keyLength:
+                  type: integer
+                  example: 256
+      responses:
+        '200':
+          description: Key generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyResponse'
+        '401':
+          description: Unauthorized - Invalid API key or License key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/retrieveKey:
+    post:
+      tags:
+        - Keys
+      summary: Retrieve an existing key
+      description: Retrieves details of an existing key
+      security:
+        - ApiKeyAuth: []
+          LicenseKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - keyName
+              properties:
+                keyName:
+                  type: string
+                  example: "my-test-key"
+      responses:
+        '200':
+          description: Key retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyResponse'
+        '401':
+          description: Unauthorized - Invalid API key or License key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/encrypt:
+    post:
+      tags:
+        - Encryption
+      summary: Encrypt data using a key
+      description: Encrypts data or files using a specified key
+      security:
+        - ApiKeyAuth: []
+          LicenseKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                keyName:
+                  type: string
+                  description: Name of the key to use for encryption
+                file:
+                  type: string
+                  format: binary
+                  description: File to encrypt
+                data:
+                  type: string
+                  description: Text data to encrypt
+                useStorage:
+                  type: boolean
+                  description: Whether to store the encrypted file
+      responses:
+        '200':
+          description: Data encrypted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  encryptedData:
+                    type: object
+        '401':
+          description: Unauthorized - Invalid API key or License key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/decrypt:
+    post:
+      tags:
+        - Encryption
+      summary: Decrypt data using a key
+      description: Decrypts data or files using a specified key
+      security:
+        - ApiKeyAuth: []
+          LicenseKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                keyName:
+                  type: string
+                  description: Name of the key to use for decryption
+                file:
+                  type: string
+                  format: binary
+                  description: Encrypted file to decrypt
+                data:
+                  type: string
+                  description: Encrypted data to decrypt
+      responses:
+        '200':
+          description: Data decrypted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  decryptedData:
+                    type: string
+        '401':
+          description: Unauthorized - Invalid API key or License key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/listFiles:
+    get:
+      tags:
+        - Storage
+      summary: List stored encrypted files
+      description: Returns a list of all encrypted files in storage
+      security:
+        - ApiKeyAuth: []
+          LicenseKeyAuth: []
+      responses:
+        '200':
+          description: List of files retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  files:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        url:
+                          type: string
+                        size:
+                          type: integer
+                        timestamp:
+                          type: string
+                        metadata:
+                          type: object
+        '401':
+          description: Unauthorized - Invalid API key or License key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/downloadFile/{fileName}:
+    get:
+      tags:
+        - Storage
+      summary: Download an encrypted file
+      description: Downloads a specific encrypted file from storage
+      security:
+        - ApiKeyAuth: []
+          LicenseKeyAuth: []
+      parameters:
+        - in: path
+          name: fileName
+          required: true
+          schema:
+            type: string
+          description: Name of the file to download
+      responses:
+        '200':
+          description: File downloaded successfully
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Unauthorized - Invalid API key or License key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'

@@ -1,0 +1,923 @@
+{
+	"info": {
+		"_postman_id": "b9bb4890-4bf0-4da7-af00-09bfac355a19",
+		"name": "KeyVaultManager MultiStorage",
+		"description": "API for managing encryption keys and performing encryption/decryption operations with multi-storage support",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "38877751"
+	},
+	"item": [
+		{
+			"name": "Keys",
+			"item": [
+				{
+					"name": "Generate Key",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							},
+							{
+								"key": "x-license-key",
+								"value": "{{licenseKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"keyName\": \"my-test-key\",\n    \"keyType\": \"AES\",\n    \"keyLength\": 256\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/generateKey",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"generateKey"
+							]
+						},
+						"description": "Creates a new key with specified parameters"
+					},
+					"response": []
+				},
+				{
+					"name": "Retrieve Key",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							},
+							{
+								"key": "x-license-key",
+								"value": "{{licenseKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"keyName\": \"my-test-key\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/retrieveKey",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"retrieveKey"
+							]
+						},
+						"description": "Retrieves details of an existing key"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Encryption",
+			"item": [
+				{
+					"name": "Encrypt Data (Default Storage)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Extract filename from headers and save to environment variable",
+									"const contentDisposition = pm.response.headers.get(\"Content-Disposition\");",
+									"if (contentDisposition) {",
+									"    const filenameMatch = contentDisposition.match(/filename=\"([^\"]+)\"/);",
+									"    if (filenameMatch && filenameMatch[1]) {",
+									"        pm.environment.set(\"fileName\", filenameMatch[1]);",
+									"        console.log(\"Saved filename to variable: \" + filenameMatch[1]);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							},
+							{
+								"key": "x-license-key",
+								"value": "{{licenseKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "keyName",
+									"value": "my-test-key",
+									"type": "text"
+								},
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "data",
+									"value": "text to encrypt",
+									"type": "text",
+									"disabled": true
+								},
+								{
+									"key": "useStorage",
+									"value": "true",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/encrypt",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"encrypt"
+							]
+						},
+						"description": "Encrypts data or files using a specified key and stores in default storage"
+					},
+					"response": []
+				},
+				{
+					"name": "Encrypt Data (ClientA Storage)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Extract filename from headers and save to environment variable",
+									"const contentDisposition = pm.response.headers.get(\"Content-Disposition\");",
+									"if (contentDisposition) {",
+									"    const filenameMatch = contentDisposition.match(/filename=\"([^\"]+)\"/);",
+									"    if (filenameMatch && filenameMatch[1]) {",
+									"        pm.environment.set(\"clientAFile\", filenameMatch[1]);",
+									"        console.log(\"Saved ClientA filename: \" + filenameMatch[1]);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							},
+							{
+								"key": "x-license-key",
+								"value": "{{licenseKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "keyName",
+									"value": "my-test-key",
+									"type": "text"
+								},
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "data",
+									"value": "This is test data for ClientA storage",
+									"type": "text",
+									"disabled": true
+								},
+								{
+									"key": "useStorage",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "storageCode",
+									"value": "clienta",
+									"description": "Specify storage location code (clienta, clientb, etc.)",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/encrypt",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"encrypt"
+							]
+						},
+						"description": "Encrypts data or files using a specified key and stores in ClientA storage location"
+					},
+					"response": []
+				},
+				{
+					"name": "Encrypt Data (ClientB Storage)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Extract filename from headers and save to environment variable",
+									"const contentDisposition = pm.response.headers.get(\"Content-Disposition\");",
+									"if (contentDisposition) {",
+									"    const filenameMatch = contentDisposition.match(/filename=\"([^\"]+)\"/);",
+									"    if (filenameMatch && filenameMatch[1]) {",
+									"        pm.environment.set(\"clientBFile\", filenameMatch[1]);",
+									"        console.log(\"Saved ClientB filename: \" + filenameMatch[1]);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							},
+							{
+								"key": "x-license-key",
+								"value": "{{licenseKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "keyName",
+									"value": "my-test-key",
+									"type": "text"
+								},
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "data",
+									"value": "This is test data for ClientB storage",
+									"type": "text",
+									"disabled": true
+								},
+								{
+									"key": "useStorage",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "storageCode",
+									"value": "clientb",
+									"description": "Specify storage location code (clienta, clientb, etc.)",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/encrypt",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"encrypt"
+							]
+						},
+						"description": "Encrypts data or files using a specified key and stores in ClientB storage location"
+					},
+					"response": []
+				},
+				{
+					"name": "Decrypt Data",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							},
+							{
+								"key": "x-license-key",
+								"value": "{{licenseKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "keyName",
+									"value": "my-test-key",
+									"type": "text"
+								},
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "data",
+									"value": "",
+									"type": "text",
+									"disabled": true
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/decrypt",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"decrypt"
+							]
+						},
+						"description": "Decrypts data or files using a specified key"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Storage",
+			"item": [
+				{
+					"name": "List Storage Locations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							},
+							{
+								"key": "x-license-key",
+								"value": "{{licenseKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/storageLocations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"storageLocations"
+							]
+						},
+						"description": "Lists all available storage locations configured in the system"
+					},
+					"response": []
+				},
+				{
+					"name": "List All Files",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							},
+							{
+								"key": "x-license-key",
+								"value": "{{licenseKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/listFiles",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"listFiles"
+							]
+						},
+						"description": "Returns a list of all encrypted files in all storage locations"
+					},
+					"response": []
+				},
+				{
+					"name": "List ClientA Files",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							},
+							{
+								"key": "x-license-key",
+								"value": "{{licenseKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/listFiles?storageCode=clienta",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"listFiles"
+							],
+							"query": [
+								{
+									"key": "storageCode",
+									"value": "clienta",
+									"description": "Storage location code to filter files"
+								}
+							]
+						},
+						"description": "Returns a list of encrypted files from ClientA storage location"
+					},
+					"response": []
+				},
+				{
+					"name": "List ClientB Files",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							},
+							{
+								"key": "x-license-key",
+								"value": "{{licenseKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/listFiles?storageCode=clientb",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"listFiles"
+							],
+							"query": [
+								{
+									"key": "storageCode",
+									"value": "clientb",
+									"description": "Storage location code to filter files"
+								}
+							]
+						},
+						"description": "Returns a list of encrypted files from ClientB storage location"
+					},
+					"response": []
+				},
+				{
+					"name": "Download File (Default Storage)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							},
+							{
+								"key": "x-license-key",
+								"value": "{{licenseKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/downloadFile/{{fileName}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"downloadFile",
+								"{{fileName}}"
+							]
+						},
+						"description": "Downloads a specific encrypted file from default storage"
+					},
+					"response": []
+				},
+				{
+					"name": "Download File (ClientA)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							},
+							{
+								"key": "x-license-key",
+								"value": "{{licenseKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/downloadFile/{{clientAFile}}?storageCode=clienta",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"downloadFile",
+								"{{clientAFile}}"
+							],
+							"query": [
+								{
+									"key": "storageCode",
+									"value": "clienta",
+									"description": "Storage location code"
+								}
+							]
+						},
+						"description": "Downloads a specific encrypted file from ClientA storage location"
+					},
+					"response": []
+				},
+				{
+					"name": "Download File (ClientB)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							},
+							{
+								"key": "x-license-key",
+								"value": "{{licenseKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/downloadFile/{{clientBFile}}?storageCode=clientb",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"downloadFile",
+								"{{clientBFile}}"
+							],
+							"query": [
+								{
+									"key": "storageCode",
+									"value": "clientb",
+									"description": "Storage location code"
+								}
+							]
+						},
+						"description": "Downloads a specific encrypted file from ClientB storage location"
+					},
+					"response": []
+				},
+				{
+					"name": "Cross-Storage Test (Should Fail)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							},
+							{
+								"key": "x-license-key",
+								"value": "{{licenseKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/downloadFile/{{clientAFile}}?storageCode=clientb",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"downloadFile",
+								"{{clientAFile}}"
+							],
+							"query": [
+								{
+									"key": "storageCode",
+									"value": "clientb",
+									"description": "Wrong storage location code"
+								}
+							]
+						},
+						"description": "Tests storage isolation - attempts to download a ClientA file from ClientB storage (should fail)"
+					},
+					"response": []
+				},
+				{
+					"name": "Retrieve Document (Default)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							},
+							{
+								"key": "x-license-key",
+								"value": "{{licenseKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/retrieveDocument?documentName={{fileName}}&keyName=my-test-key",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"retrieveDocument"
+							],
+							"query": [
+								{
+									"key": "documentName",
+									"value": "{{fileName}}",
+									"description": "Name of the encrypted file to retrieve and decrypt"
+								},
+								{
+									"key": "keyName",
+									"value": "my-test-key",
+									"description": "Name of the key to use for decryption"
+								}
+							]
+						},
+						"description": "Retrieves and decrypts a document from default storage in one operation"
+					},
+					"response": []
+				},
+				{
+					"name": "Retrieve Document (ClientA)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							},
+							{
+								"key": "x-license-key",
+								"value": "{{licenseKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/retrieveDocument?documentName={{clientAFile}}&keyName=my-test-key&storageCode=clienta",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"retrieveDocument"
+							],
+							"query": [
+								{
+									"key": "documentName",
+									"value": "{{clientAFile}}",
+									"description": "Name of the encrypted file to retrieve and decrypt"
+								},
+								{
+									"key": "keyName",
+									"value": "my-test-key",
+									"description": "Name of the key to use for decryption"
+								},
+								{
+									"key": "storageCode",
+									"value": "clienta",
+									"description": "Storage location code"
+								}
+							]
+						},
+						"description": "Retrieves and decrypts a document from ClientA storage in one operation"
+					},
+					"response": []
+				},
+				{
+					"name": "Retrieve Document (ClientB)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							},
+							{
+								"key": "x-license-key",
+								"value": "{{licenseKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/retrieveDocument?documentName={{clientBFile}}&keyName=my-test-key&storageCode=clientb",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"retrieveDocument"
+							],
+							"query": [
+								{
+									"key": "documentName",
+									"value": "{{clientBFile}}",
+									"description": "Name of the encrypted file to retrieve and decrypt"
+								},
+								{
+									"key": "keyName",
+									"value": "my-test-key",
+									"description": "Name of the key to use for decryption"
+								},
+								{
+									"key": "storageCode",
+									"value": "clientb",
+									"description": "Storage location code"
+								}
+							]
+						},
+						"description": "Retrieves and decrypts a document from ClientB storage in one operation"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Secrets",
+			"item": [
+				{
+					"name": "Create Secret",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							},
+							{
+								"key": "x-license-key",
+								"value": "{{licenseKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"secretName\": \"my-secret\",\n    \"secretValue\": \"mysecretvalue123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/createSecret",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"createSecret"
+							]
+						},
+						"description": "Stores a new secret in the key vault"
+					},
+					"response": []
+				},
+				{
+					"name": "Retrieve Secret",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{apiKey}}",
+								"type": "text"
+							},
+							{
+								"key": "x-license-key",
+								"value": "{{licenseKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"secretName\": \"my-secret\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/retrieveSecret",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"retrieveSecret"
+							]
+						},
+						"description": "Retrieves a secret from the key vault"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000/api",
+			"type": "string"
+		},
+		{
+			"key": "fileName",
+			"value": "example.enc",
+			"type": "string"
+		},
+		{
+			"key": "apiKey",
+			"value": "api-key-mvp-2024",
+			"type": "string"
+		},
+		{
+			"key": "licenseKey",
+			"value": "keyvaultmanager-mvp-2024",
+			"type": "string"
+		},
+		{
+			"key": "clientAFile",
+			"value": "clienta-example.enc",
+			"type": "string"
+		},
+		{
+			"key": "clientBFile",
+			"value": "clientb-example.enc",
+			"type": "string"
+		}
+	]
+} 
