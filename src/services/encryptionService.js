@@ -71,7 +71,12 @@ class EncryptionService {
 
             // Handle storage if requested
             if (isFile && useStorage) {
-                const fileName = `${path.basename(originalFileName)}-${Date.now()}.enc`;
+                // Extract the base filename without any path or extension 
+                // Assuming originalFileName contains something like "Phase-2-Sprint-II-Results (1).pdf"
+                const fileName = this.createCleanEncryptedFilename(originalFileName);
+                
+                logger.info(`Uploading encrypted file with clean name: ${fileName}`);
+                
                 const storageResult = await storageService.uploadFile(
                     fileName,
                     Buffer.from(JSON.stringify(result)),
@@ -85,10 +90,10 @@ class EncryptionService {
                     storageCode // Pass the storage code to the storage service
                 );
                 result.storageDetails = {
-                    fileName,
+                    fileName: fileName, // Use our clean filename, not the one from storage service which might have been modified
                     url: storageResult.url,
                     metadata: storageResult.metadata,
-                    storageCode: storageResult.storageCode
+                    storageCode: storageResult.storageCode || storageCode
                 };
             }
 
@@ -210,6 +215,45 @@ class EncryptionService {
             logger.error(`Document retrieval and decryption failed: ${error.stack}`);
             throw new Error(`Failed to retrieve and decrypt document: ${error.message}`);
         }
+    }
+
+    /**
+     * Creates a clean filename for encrypted files
+     * @param {string} originalFileName - The original file name
+     * @returns {string} - A clean filename with .enc extension and no timestamp
+     */
+    createCleanEncryptedFilename(originalFileName) {
+        // Extract just the base name (without path)
+        const baseName = path.basename(originalFileName);
+        
+        // Extract name parts - everything before the last dot
+        const nameParts = baseName.split('.');
+        
+        // If there's an extension, remove it, otherwise use the whole name
+        let nameWithoutExtension;
+        if (nameParts.length > 1) {
+            // Remove the last part (extension)
+            nameParts.pop();
+            nameWithoutExtension = nameParts.join('.');
+        } else {
+            nameWithoutExtension = baseName;
+        }
+        
+        // Remove any existing timestamps that might be present
+        nameWithoutExtension = nameWithoutExtension.replace(/-\d{13,14}$/, '');
+        
+        // Replace problematic characters with underscores, but preserve spaces, 
+        // parentheses, and hyphens to maintain readability
+        const cleanName = nameWithoutExtension.replace(/[^a-zA-Z0-9\s().\-_]/g, '_');
+        
+        // Ensure there's no timestamp in the format we're seeing in the issue
+        const finalName = cleanName.replace(/-\d{13}(?=\.enc)?$/, '');
+        
+        // Log the original and clean names for debugging
+        logger.info(`Original filename: "${originalFileName}", Clean name: "${finalName}.enc"`);
+        
+        // Return the cleaned name with .enc extension
+        return `${finalName}.enc`;
     }
 }
 

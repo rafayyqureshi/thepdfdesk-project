@@ -478,6 +478,12 @@
                 return;
             }
 
+            // If we're viewing a specific storage location, get it from the dropdown
+            let forcedStorageCode = null;
+            if (elementId === 'list-files-result') {
+                forcedStorageCode = document.getElementById('list-files-storage').value || null;
+            }
+
             let html = `
                 <table>
                     <thead>
@@ -485,26 +491,25 @@
                             <th>File Name</th>
                             <th>Storage Location</th>
                             <th>Size</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
 
             files.forEach(file => {
-                const badgeClass = file.storageCode === 'default' ? 'default-badge' : 
-                                  file.storageCode === 'clienta' ? 'clienta-badge' : 
-                                  file.storageCode === 'clientb' ? 'clientb-badge' : '';
+                // Determine which storage code to display
+                // Use forced storage code for specific views, otherwise use file's storage code
+                const displayStorageCode = forcedStorageCode || file.storageCode || 'default';
+                
+                const badgeClass = displayStorageCode === 'default' ? 'default-badge' : 
+                                  displayStorageCode === 'clienta' ? 'clienta-badge' : 
+                                  displayStorageCode === 'clientb' ? 'clientb-badge' : '';
                 
                 html += `
                     <tr>
                         <td>${file.name}</td>
-                        <td><span class="storage-badge ${badgeClass}">${file.storageCode || 'default'}</span></td>
+                        <td><span class="storage-badge ${badgeClass}">${displayStorageCode}</span></td>
                         <td>${file.size ? (file.size / 1024).toFixed(2) + ' KB' : 'N/A'}</td>
-                        <td>
-                            <button onclick="downloadFile('${file.name}', '${file.storageCode || ''}')">Download</button>
-                            <button onclick="retrieveDocument('${file.name}', document.getElementById('retrieve-key-name').value, '${file.storageCode || ''}')">Decrypt</button>
-                        </td>
                     </tr>
                 `;
             });
@@ -648,14 +653,57 @@
         }
 
         async function listFilesByStorage() {
-            const storageCode = document.getElementById('list-files-storage').value;
+            const storageDropdown = document.getElementById('list-files-storage');
+            const selectedStorageCode = storageDropdown.value;
+            const selectedStorageText = storageDropdown.options[storageDropdown.selectedIndex].text;
+            
             showLoading('list-files-result');
             
-            const endpoint = storageCode ? `/listFiles?storageCode=${storageCode}` : '/listFiles';
+            const endpoint = selectedStorageCode ? `/listFiles?storageCode=${selectedStorageCode}` : '/listFiles';
             const result = await makeApiRequest(endpoint);
             
-            if (result.success) {
-                renderFiles(result.data.files, 'list-files-result');
+            if (result.success && result.data.files && result.data.files.length > 0) {
+                // Rather than using the renderFiles function, we'll create the HTML directly
+                // This ensures we completely control the display
+                let html = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>File Name</th>
+                                <th>Storage Location</th>
+                                <th>Size</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                // Use the selected storage code for all files
+                const displayStorageCode = selectedStorageCode || 'default';
+                const badgeClass = displayStorageCode === 'default' ? 'default-badge' : 
+                                  displayStorageCode === 'clienta' ? 'clienta-badge' : 
+                                  displayStorageCode === 'clientb' ? 'clientb-badge' : '';
+                
+                // Create table rows with the forced storage code
+                result.data.files.forEach(file => {
+                    html += `
+                        <tr>
+                            <td>${file.name}</td>
+                            <td><span class="storage-badge ${badgeClass}">${selectedStorageText || displayStorageCode}</span></td>
+                            <td>${file.size ? (file.size / 1024).toFixed(2) + ' KB' : 'N/A'}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                        </tbody>
+                    </table>
+                `;
+
+                // Set the HTML directly
+                document.getElementById('list-files-result').innerHTML = html;
+                
+            } else if (result.success && (!result.data.files || result.data.files.length === 0)) {
+                showError('list-files-result', 'No files found in this storage location.');
             } else {
                 showError('list-files-result', `Failed to fetch files: ${result.error || 'Unknown error'}`);
             }
@@ -742,19 +790,54 @@
             const result = await makeApiRequest('/encrypt', 'POST', formData, true);
             
             if (result.success) {
-                const filename = result.headers['Content-Disposition']?.match(/filename="([^"]+)"/)?.[1] || 'encrypted_file';
-                const storageUsed = result.headers['X-Storage-Code'] || 'default';
+                // Read the blob to extract the actualStorageCode if present
+                let actualStorageCode = result.headers['X-Storage-Code'] || 'default';
+                let displayFileName = 'encrypted_file';
+                
+                try {
+                    // Clone the blob before reading it as text
+                    const blobClone = result.blob.slice(0, result.blob.size, result.blob.type);
+                    const blobText = await blobClone.text();
+                    const blobData = JSON.parse(blobText);
+                    
+                    // Use the actual storage code from the response if available
+                    if (blobData.actualStorageCode) {
+                        actualStorageCode = blobData.actualStorageCode;
+                    } else if (blobData.storageDetails && blobData.storageDetails.storageCode) {
+                        actualStorageCode = blobData.storageDetails.storageCode;
+                    }
+                    
+                    // Clean up the filename for display
+                    if (blobData.storageDetails && blobData.storageDetails.fileName) {
+                        // Get the filename from storage details
+                        displayFileName = blobData.storageDetails.fileName;
+                        
+                        // Remove any timestamp pattern if still present
+                        displayFileName = displayFileName.replace(/-\d{13,14}(?=\.enc$)/, '');
+                    } else if (file) {
+                        // Create a clean filename without timestamp
+                        const nameWithoutExt = file.name.split('.').slice(0, -1).join('.');
+                        displayFileName = nameWithoutExt + '.enc';
+                    }
+                } catch (error) {
+                    console.error('Error parsing response data:', error);
+                    // If there's an error parsing, use a sanitized filename
+                    if (file) {
+                        const nameWithoutExt = file.name.split('.').slice(0, -1).join('.');
+                        displayFileName = nameWithoutExt + '.enc';
+                    }
+                }
                 
                 showSuccess(
                     'encrypt-result', 
-                    `Data encrypted successfully! File: ${filename}, Storage: ${storageUsed}`
+                    `Data encrypted successfully! File: ${displayFileName}, Storage: ${actualStorageCode}`
                 );
                 
                 // Initialize download
                 const downloadUrl = URL.createObjectURL(result.blob);
                 const a = document.createElement('a');
                 a.href = downloadUrl;
-                a.download = filename;
+                a.download = displayFileName;
                 a.textContent = 'Click here to download the encrypted file';
                 a.style.display = 'block';
                 a.style.marginTop = '10px';
@@ -832,6 +915,9 @@
                 showLoading('files-result');
             }
             
+            console.log(`Downloading file: ${fileName} from storage: ${storageCode || 'default'}`);
+            
+            // Ensure storageCode is explicitly included in the query
             const endpoint = `/downloadFile/${fileName}${storageCode ? `?storageCode=${storageCode}` : ''}`;
             const result = await makeApiRequest(endpoint);
             
@@ -842,7 +928,7 @@
                 
                 showSuccess(
                     targetId, 
-                    `File downloaded successfully! ${storageCode ? `Storage: ${storageCode}` : ''}`
+                    `File downloaded successfully! Storage: ${storageCode || 'default'}`
                 );
                 
                 // Initialize download
@@ -892,11 +978,14 @@
                 showLoading('files-result');
             }
             
+            console.log(`Retrieving document: ${fileName} with key: ${keyName} from storage: ${storageCode || 'default'}`);
+            
             const params = new URLSearchParams({
                 documentName: fileName,
                 keyName: keyName
             });
             
+            // Ensure storageCode is always included when available
             if (storageCode) {
                 params.append('storageCode', storageCode);
             }
@@ -911,7 +1000,7 @@
                 
                 showSuccess(
                     targetId, 
-                    `Document retrieved and decrypted successfully! ${storageCode ? `Storage: ${storageCode}` : ''}`
+                    `Document retrieved and decrypted successfully! Storage: ${storageCode || 'default'}`
                 );
                 
                 // Initialize download
