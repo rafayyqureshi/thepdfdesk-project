@@ -288,16 +288,25 @@
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = fileName.replace('.enc', ''); // Remove .enc extension if present
+                
+                // Better filename handling - ensure we always remove .enc extension if present
+                let downloadName = fileName;
+                if (downloadName.toLowerCase().endsWith('.enc')) {
+                    downloadName = downloadName.slice(0, -4);
+                }
+                a.download = downloadName;
+                
                 document.body.appendChild(a);
                 a.click();
                 
                 // Cleanup
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
+                
+                showNotification('File downloaded successfully', 'success');
             } catch (error) {
                 console.error('Download error:', error);
-                alert(`Failed to download file: ${error.message}`);
+                showNotification(`Failed to download file: ${error.message}`, 'error');
             }
         }
 
@@ -856,7 +865,27 @@ async function downloadDecryptedFile(response) {
 }
 
 function getFileName(response) {
-    return response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'decrypted_file';
+    // First try to get filename from Content-Disposition header
+    const dispositionFilename = response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '');
+    
+    if (dispositionFilename && dispositionFilename !== 'decrypted_file') {
+        return dispositionFilename;
+    }
+    
+    // If we're here, either there was no filename in the header or it was generic
+    // Try to get the original filename from the decrypted file input
+    const fileInput = document.getElementById('fileToDecrypt');
+    if (fileInput && fileInput.files.length > 0) {
+        const originalName = fileInput.files[0].name;
+        // If filename ends with .enc, remove it
+        if (originalName.toLowerCase().endsWith('.enc')) {
+            return originalName.slice(0, -4);
+        }
+        return originalName;
+    }
+    
+    // Fallback to a generic name
+    return 'decrypted_file';
 }
 
 // Helper function for file size formatting
@@ -961,15 +990,27 @@ async function downloadStoredFile(fileName) {
             throw new Error(`Download failed: ${response.status}`);
         }
 
+        // Create blob from response
         const blob = await response.blob();
+        
+        // Create download link
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = fileName.replace('.enc', '');
+        
+        // Better filename handling - ensure we always remove .enc extension if present
+        let downloadName = fileName;
+        if (downloadName.toLowerCase().endsWith('.enc')) {
+            downloadName = downloadName.slice(0, -4);
+        }
+        a.download = downloadName;
+        
         document.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
+        
+        // Cleanup
         window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
         
         showNotification('File downloaded successfully', 'success');
     } catch (error) {

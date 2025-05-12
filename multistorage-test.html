@@ -871,10 +871,26 @@
             formData.append('keyName', keyName);
             formData.append('file', file);
             
+            // Store the original filename to use for better naming
+            const originalFileName = file.name;
+            let originalNameWithoutEnc = originalFileName;
+            if (originalNameWithoutEnc.toLowerCase().endsWith('.enc')) {
+                originalNameWithoutEnc = originalNameWithoutEnc.slice(0, -4);
+            }
+            
+            // Add the original filename as a hint to the server
+            formData.append('originalFileName', originalNameWithoutEnc);
+            
             const result = await makeApiRequest('/decrypt', 'POST', formData, true);
             
             if (result.success) {
-                const filename = result.headers['Content-Disposition']?.match(/filename="([^"]+)"/)?.[1] || 'decrypted_file';
+                // Try to get filename from headers first
+                let filename = result.headers['Content-Disposition']?.match(/filename="([^"]+)"/)?.[1];
+                
+                // If no filename in header or it's generic, use our original filename
+                if (!filename || filename === 'decrypted_file' || filename === 'document') {
+                    filename = originalNameWithoutEnc;
+                }
                 
                 showSuccess(
                     'decrypt-result', 
@@ -996,7 +1012,19 @@
             const targetId = document.getElementById('retrieve-filename') ? 'retrieve-result' : 'files-result';
             
             if (result.success) {
-                const filename = result.headers['Content-Disposition']?.match(/filename="([^"]+)"/)?.[1] || 'document';
+                // First try to get the filename from Content-Disposition header
+                let filename = result.headers['Content-Disposition']?.match(/filename="([^"]+)"/)?.[1] || 'document';
+                
+                // If that doesn't work or we get a generic name, try to derive it from the original filename
+                if (filename === 'document' || filename === 'decrypted_file') {
+                    // If the original filename ends with .enc, remove it
+                    if (fileName.toLowerCase().endsWith('.enc')) {
+                        filename = fileName.slice(0, -4); // Remove .enc extension
+                    } else {
+                        // Otherwise just use the original filename
+                        filename = fileName;
+                    }
+                }
                 
                 showSuccess(
                     targetId, 
