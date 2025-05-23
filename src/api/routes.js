@@ -99,17 +99,38 @@ router.post('/encrypt', upload.single('file'), async (req, res) => {
 
         if (req.file) {
             // For files, prepare for download
-            const downloadFileName = useStorage ? 
-                encryptedResult.storageDetails.fileName : 
-                `${originalFileName}.enc`;
+            let downloadFileName;
+            
+            if (useStorage && encryptedResult.storageDetails) {
+                // Use the clean filename from storage
+                downloadFileName = encryptedResult.storageDetails.fileName;
+                logger.info(`File encrypted and stored as: ${downloadFileName}`);
+            } else {
+                // For direct downloads, create a clean filename
+                const fileNameParts = path.basename(originalFileName).split('.');
+                const fileExt = fileNameParts.length > 1 ? fileNameParts.pop() : '';
+                const baseName = fileNameParts.join('.');
+                downloadFileName = `${baseName}.enc`;
+                logger.info(`File encrypted for direct download as: ${downloadFileName}`);
+            }
+            
+            // Ensure the actual storage code used is sent to the client
+            const actualStorageCode = useStorage ? 
+                encryptedResult.storageDetails.storageCode : 
+                (storageCode || azureConfig.storage.defaultCode);
                 
             res.set({
                 'Content-Type': 'application/octet-stream',
                 'Content-Disposition': `attachment; filename="${downloadFileName}"`,
                 'X-Original-Name': originalFileName,
                 'X-Original-Extension': path.extname(originalFileName),
-                'X-Storage-Code': storageCode || azureConfig.storage.defaultCode
+                'X-Storage-Code': actualStorageCode
             });
+
+            // Make sure to include the actual storage code in the response
+            if (useStorage && encryptedResult.storageDetails) {
+                encryptedResult.actualStorageCode = actualStorageCode;
+            }
 
             // Send encrypted data as file
             const responseData = Buffer.from(JSON.stringify(encryptedResult));
@@ -172,16 +193,40 @@ router.post('/decrypt', upload.single('file'), async (req, res) => {
 
         if (decryptedResult.isFile) {
             // Use original filename with extension if available
-            const originalFileName = decryptedResult.originalFileName || 'decrypted_file';
-            const extension = decryptedResult.originalExtension || '';
-            const downloadFileName = extension ? 
-                originalFileName : // If we have the original filename with extension
-                `${originalFileName}${extension}`; // Otherwise append extension
+            let downloadFileName;
+            
+            if (decryptedResult.originalFileName) {
+                // For the download file name, use the original file name
+                // We need to handle the case where the .enc extension was appended without removing original extension
+                if (decryptedResult.originalFileName.toLowerCase().endsWith('.enc')) {
+                    // If original name ends with .enc, remove it
+                    downloadFileName = decryptedResult.originalFileName.slice(0, -4);
+                } else {
+                    // Otherwise, use the original filename as is
+                    downloadFileName = decryptedResult.originalFileName;
+                }
+                
+                // If we didn't store the extension in originalExtension but it's part of the originalFileName, 
+                // no need to append anything
+                if (!downloadFileName.includes('.') && decryptedResult.originalExtension) {
+                    downloadFileName += decryptedResult.originalExtension;
+                }
+            } else {
+                // Fallback if no original filename is available
+                downloadFileName = 'decrypted_file';
+                if (decryptedResult.originalExtension) {
+                    downloadFileName += decryptedResult.originalExtension;
+                }
+            }
+            
+            logger.info(`Sending decrypted file for download: ${downloadFileName}`);
 
             res.set({
                 'Content-Type': 'application/octet-stream',
                 'Content-Disposition': `attachment; filename="${downloadFileName}"`,
-                'Content-Length': decryptedResult.data.length
+                'Content-Length': decryptedResult.data.length,
+                'X-Original-Name': decryptedResult.originalFileName || req.file?.originalname || 'decrypted_file',
+                'X-Original-Extension': decryptedResult.originalExtension || ''
             });
             res.send(decryptedResult.data);
         } else {
@@ -200,8 +245,30 @@ router.post('/decrypt', upload.single('file'), async (req, res) => {
 router.get('/listFiles', validateLicenseKey, async (req, res) => {
     try {
         const storageCode = req.query.storageCode || null;
-        const files = await storageService.listFiles(storageCode);
-        res.json(files);
+        logger.info(`Listing files from storage: ${storageCode || 'all locations'}`);
+        
+        const result = await storageService.listFiles(storageCode);
+        
+        // For specific storage location requests, force the storage code in the response
+        if (storageCode && result.success && result.files) {
+            // Set requested storage code on all files to ensure UI displays correctly
+            result.files = result.files.map(file => {
+                // Store actual metadata storage code for debugging
+                const actualMetadataStorageCode = file.metadata?.storageCode;
+                
+                return {
+                    ...file,
+                    storageCode: storageCode, // Force display of requested storage code
+                    actualMetadataStorageCode // Keep original for debugging
+                };
+            });
+            
+            // Add info about forced storage code
+            result.requestedStorageCode = storageCode;
+            result.forcedStorageDisplay = true;
+        }
+        
+        res.json(result);
     } catch (error) {
         logger.error(`Failed to list files: ${error.message}`);
         res.status(500).json({ error: error.message });
@@ -211,18 +278,70 @@ router.get('/listFiles', validateLicenseKey, async (req, res) => {
 // Download File with Storage_Code support
 router.get('/downloadFile/:fileName', validateLicenseKey, async (req, res) => {
     try {
-        const fileName = req.params.fileName;
-        const storageCode = req.query.storageCode || null;
-        const result = await storageService.downloadFile(fileName, storageCode);
+        let fileName = req.params.fileName;
+        const requestedStorageCode = req.query.storageCode || null;
         
-        res.set({
-            'Content-Type': 'application/octet-stream',
-            'Content-Disposition': `attachment; filename="${fileName}"`,
-            'Content-Length': result.data.length,
-            'X-Storage-Code': result.storageCode || azureConfig.storage.defaultCode
-        });
+        logger.info(`Attempting to download file: ${fileName} from storage: ${requestedStorageCode || 'default'}`);
         
-        res.send(result.data);
+        // Handle case where filename might have timestamp or original extension
+        // Try to clean it up for better matching
+        if (fileName.match(/-\d{13,14}\.enc$/)) {
+            // Remove timestamp if present
+            const cleanFileName = fileName.replace(/-\d{13,14}(?=\.enc$)/, '');
+            logger.info(`Cleaned up filename from ${fileName} to ${cleanFileName}`);
+            fileName = cleanFileName;
+        }
+        
+        // If no specific storage code requested, try to find the file in any storage location
+        if (!requestedStorageCode) {
+            // Get all storage locations
+            const storageLocations = storageService.getStorageLocations();
+            
+            // Try each location until we find the file
+            for (const location of storageLocations) {
+                try {
+                    const result = await storageService.downloadFile(fileName, location.code);
+                    if (result && result.success) {
+                        logger.info(`File found in storage location: ${location.code}`);
+        
+                        res.set({
+                            'Content-Type': 'application/octet-stream',
+                            'Content-Disposition': `attachment; filename="${fileName}"`,
+                            'Content-Length': result.data.length,
+                            'X-Storage-Code': location.code
+                        });
+        
+                        res.send(result.data);
+                        return;
+                    }
+                } catch (error) {
+                    logger.debug(`File not found in ${location.code}: ${error.message}`);
+                    // Continue to the next storage location
+                }
+            }
+            
+            // If we get here, the file was not found in any location
+            throw new Error(`File ${fileName} not found in any storage location`);
+        }
+        
+        // Try from the requested storage location - NO FALLBACK for proper isolation
+        try {
+            const result = await storageService.downloadFile(fileName, requestedStorageCode);
+            
+            res.set({
+                'Content-Type': 'application/octet-stream',
+                'Content-Disposition': `attachment; filename="${fileName}"`,
+                'Content-Length': result.data.length,
+                'X-Storage-Code': result.storageCode || requestedStorageCode
+            });
+            
+            res.send(result.data);
+        } catch (error) {
+            logger.error(`Download failed from storage ${requestedStorageCode}: ${error.message}`);
+            
+            // No fallback - enforce storage isolation
+            throw new Error(`File ${fileName} not found in ${requestedStorageCode} storage`);
+        }
     } catch (error) {
         logger.error(`File download failed: ${error.message}`);
         res.status(500).json({ error: error.message });
@@ -294,6 +413,8 @@ router.get('/retrieveDocument', validateLicenseKey, async (req, res) => {
             throw new Error('Key name is required');
         }
         
+        logger.info(`Retrieving document ${documentName} from storage ${storageCode || 'any'} using key ${keyName}`);
+        
         // Retrieve and decrypt the document
         const decryptedResult = await encryptionService.retrieveDocument(
             documentName,
@@ -303,19 +424,41 @@ router.get('/retrieveDocument', validateLicenseKey, async (req, res) => {
         
         if (decryptedResult.isFile) {
             // Use original filename with extension if available
-            const originalFileName = decryptedResult.originalFileName || 'decrypted_file';
-            const extension = decryptedResult.originalExtension || '';
-            const downloadFileName = extension ? 
-                originalFileName : // If we have the original filename with extension
-                `${originalFileName}${extension}`; // Otherwise append extension
+            let downloadFileName;
+            
+            if (decryptedResult.originalFileName) {
+                // For the download file name, use the original file name
+                // We need to handle the case where the .enc extension was appended without removing original extension
+                if (decryptedResult.originalFileName.toLowerCase().endsWith('.enc')) {
+                    // If original name ends with .enc, remove it
+                    downloadFileName = decryptedResult.originalFileName.slice(0, -4);
+                } else {
+                    // Otherwise, use the original filename as is
+                    downloadFileName = decryptedResult.originalFileName;
+                }
+                
+                // If we didn't store the extension in originalExtension but it's part of the originalFileName, 
+                // no need to append anything
+                if (!downloadFileName.includes('.') && decryptedResult.originalExtension) {
+                    downloadFileName += decryptedResult.originalExtension;
+                }
+            } else {
+                // Fallback if no original filename is available
+                downloadFileName = 'decrypted_file';
+                if (decryptedResult.originalExtension) {
+                    downloadFileName += decryptedResult.originalExtension;
+                }
+            }
+            
+            logger.info(`Sending decrypted file for download: ${downloadFileName}`);
 
             res.set({
                 'Content-Type': 'application/octet-stream',
                 'Content-Disposition': `attachment; filename="${downloadFileName}"`,
                 'Content-Length': decryptedResult.data.length,
-                'X-Original-Name': originalFileName,
-                'X-Original-Extension': decryptedResult.originalExtension,
-                'X-Storage-Code': decryptedResult.storageCode || azureConfig.storage.defaultCode
+                'X-Original-Name': decryptedResult.originalFileName || documentName,
+                'X-Original-Extension': decryptedResult.originalExtension || '',
+                'X-Storage-Code': decryptedResult.storageCode || storageCode || azureConfig.storage.defaultCode
             });
             res.send(decryptedResult.data);
         } else {

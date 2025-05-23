@@ -1,4 +1,27 @@
+# Node modules
 node_modules/
+
+# Environment variables
 .env
-dist/
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Logs
 *.log
+logs/
+combined.log
+error.log
+
+# IDE files
+.vscode/
+.idea/
+
+# Build files
+dist/
+build/
+
+# OS specific files
+.DS_Store
+Thumbs.db

@@ -50,6 +50,10 @@ class EncryptionService {
                 cipher.final()
             ]);
 
+            // Get file extension for better metadata
+            const fileExtension = isFile ? path.extname(originalFileName) : '';
+            const fileNameWithoutExt = isFile ? path.basename(originalFileName, fileExtension) : '';
+            
             // Prepare the result object
             const result = {
                 encryptionType,
@@ -58,7 +62,8 @@ class EncryptionService {
                 keyName: keyName,
                 isFile: isFile,
                 originalFileName: originalFileName,
-                originalExtension: isFile ? path.extname(originalFileName) : '',
+                originalExtension: fileExtension,
+                fileNameWithoutExt: fileNameWithoutExt, // Store the filename without extension for better restoration
                 timestamp: new Date().toISOString(),
                 originalSize: inputBuffer.length,
                 encryptedSize: encryptedBuffer.length
@@ -71,7 +76,11 @@ class EncryptionService {
 
             // Handle storage if requested
             if (isFile && useStorage) {
-                const fileName = `${path.basename(originalFileName)}-${Date.now()}.enc`;
+                // Create clean filename for storage
+                const fileName = this.createCleanEncryptedFilename(originalFileName);
+                
+                logger.info(`Uploading encrypted file with clean name: ${fileName}`);
+                
                 const storageResult = await storageService.uploadFile(
                     fileName,
                     Buffer.from(JSON.stringify(result)),
@@ -79,16 +88,17 @@ class EncryptionService {
                         keyName,
                         originalFileName,
                         originalExtension: result.originalExtension,
+                        fileNameWithoutExt: result.fileNameWithoutExt,
                         timestamp: result.timestamp,
                         encryptionType
                     },
                     storageCode // Pass the storage code to the storage service
                 );
                 result.storageDetails = {
-                    fileName,
+                    fileName: fileName, // Use our clean filename, not the one from storage service which might have been modified
                     url: storageResult.url,
                     metadata: storageResult.metadata,
-                    storageCode: storageResult.storageCode
+                    storageCode: storageResult.storageCode || storageCode
                 };
             }
 
@@ -153,11 +163,20 @@ class EncryptionService {
                 decipher.final()
             ]);
 
+            // Handle the original file name and extension properly
+            let originalFileName = dataToDecrypt.originalFileName;
+            let originalExtension = dataToDecrypt.originalExtension;
+
+            // If original filename ends with .enc due to our encryption process, store that information
+            // but don't modify the originalFileName value from the metadata
+            const hasEncExtension = originalFileName && originalFileName.toLowerCase().endsWith('.enc');
+
             return {
                 data: decryptedBuffer,
                 isFile: dataToDecrypt.isFile,
-                originalFileName: dataToDecrypt.originalFileName,
-                originalExtension: dataToDecrypt.originalExtension,
+                originalFileName: originalFileName,
+                originalExtension: originalExtension,
+                hasEncExtension: hasEncExtension,
                 originalSize: dataToDecrypt.originalSize,
                 decryptedSize: decryptedBuffer.length,
                 timestamp: dataToDecrypt.timestamp,
@@ -181,35 +200,109 @@ class EncryptionService {
         try {
             logger.info(`Retrieving document ${documentName} from storage ${storageCode || 'default'} using key ${keyName}`);
             
-            // Download the encrypted file from storage
-            const downloadResult = await storageService.downloadFile(documentName, storageCode);
-            
-            if (!downloadResult || !downloadResult.success) {
-                throw new Error('Failed to download the file from storage');
+            // Ensure the document name has .enc extension for storage retrieval
+            let storageDocumentName = documentName;
+            if (!documentName.toLowerCase().endsWith('.enc')) {
+                storageDocumentName = `${documentName}.enc`;
+                logger.info(`Added .enc extension for storage retrieval: ${storageDocumentName}`);
             }
             
-            // Parse the encrypted data
-            let encryptedData;
-            try {
-                const fileContent = downloadResult.data.toString();
-                encryptedData = JSON.parse(fileContent);
-            } catch (error) {
-                throw new Error(`Failed to parse encrypted file: ${error.message}`);
+            // If no specific storage is requested, we need to be more flexible and try both formats
+            if (!storageCode) {
+                try {
+                    // Try first with .enc extension
+                    const downloadResult = await storageService.downloadFile(storageDocumentName, null);
+                    if (downloadResult && downloadResult.success) {
+                        return this.processDecryptedDocument(downloadResult, keyName);
+                    }
+                } catch (firstError) {
+                    logger.info(`File not found with .enc extension, trying original name: ${documentName}`);
+                    try {
+                        // Try with original name as fallback
+                        const altResult = await storageService.downloadFile(documentName, null);
+                        if (altResult && altResult.success) {
+                            return this.processDecryptedDocument(altResult, keyName);
+                        }
+                    } catch (secondError) {
+                        throw new Error(`Document not found in any storage location: ${documentName}`);
+                    }
+                }
+            } else {
+                // With a specific storage code, enforce storage isolation
+                try {
+                    // First try with .enc extension
+                    const downloadResult = await storageService.downloadFile(storageDocumentName, storageCode);
+                    if (downloadResult && downloadResult.success) {
+                        return this.processDecryptedDocument(downloadResult, keyName);
+                    }
+                } catch (firstError) {
+                    logger.info(`File with .enc extension not found in storage ${storageCode}, trying original name`);
+                    // Try with original name as fallback (only for filename format, still in same storage)
+                    const altResult = await storageService.downloadFile(documentName, storageCode);
+                    if (altResult && altResult.success) {
+                        return this.processDecryptedDocument(altResult, keyName);
+                    }
+                    // If we get here, file was not found in the specified storage with either name format
+                    throw new Error(`Document not found in storage ${storageCode}`);
+                }
             }
             
-            // Decrypt the data
-            const decryptedResult = await this.decrypt(encryptedData, keyName);
-            
-            // Return the decrypted result with additional metadata
-            return {
-                ...decryptedResult,
-                storageCode: downloadResult.storageCode,
-                metadata: downloadResult.metadata?.metadata
-            };
+            // If we reach here without finding the document, throw an error
+            throw new Error('Failed to download the file from storage');
         } catch (error) {
             logger.error(`Document retrieval and decryption failed: ${error.stack}`);
             throw new Error(`Failed to retrieve and decrypt document: ${error.message}`);
         }
+    }
+    
+    /**
+     * Helper method to process downloaded encrypted document
+     * @param {Object} downloadResult - The download result from storage
+     * @param {string} keyName - Name of the key to use for decryption
+     * @returns {Promise<object>} - Processed decrypted document
+     */
+    async processDecryptedDocument(downloadResult, keyName) {
+        // Parse the encrypted data
+        let encryptedData;
+        try {
+            const fileContent = downloadResult.data.toString();
+            encryptedData = JSON.parse(fileContent);
+        } catch (error) {
+            throw new Error(`Failed to parse encrypted file: ${error.message}`);
+        }
+        
+        // Decrypt the data
+        const decryptedResult = await this.decrypt(encryptedData, keyName);
+        
+        // Return the decrypted result with additional metadata
+        return {
+            ...decryptedResult,
+            storageCode: downloadResult.storageCode,
+            metadata: downloadResult.metadata?.metadata
+        };
+    }
+
+    /**
+     * Creates a clean filename for encrypted files
+     * @param {string} originalFileName - The original file name
+     * @returns {string} - A clean filename with .enc extension added without removing original extension
+     */
+    createCleanEncryptedFilename(originalFileName) {
+        // Extract just the base name (without path)
+        const baseName = path.basename(originalFileName);
+        
+        // Remove any existing timestamps that might be present
+        let cleanName = baseName.replace(/-\d{13,14}$/, '');
+        
+        // Replace problematic characters with underscores, but preserve spaces, 
+        // parentheses, and hyphens to maintain readability
+        cleanName = cleanName.replace(/[^a-zA-Z0-9\s().\-_]/g, '_');
+        
+        // Log the original and clean names for debugging
+        logger.info(`Original filename: "${originalFileName}", Clean name: "${cleanName}.enc"`);
+        
+        // Return the cleaned name with .enc extension APPENDED (not replacing the original extension)
+        return `${cleanName}.enc`;
     }
 }
 

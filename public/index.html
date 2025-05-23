@@ -281,23 +281,25 @@
                     throw new Error(`Download failed: ${response.status}`);
                 }
 
-                // Create blob from response
                 const blob = await response.blob();
-                
-                // Create download link
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = fileName.replace('.enc', ''); // Remove .enc extension if present
+                
+                // Check if this is an encrypted file being downloaded directly (keep .enc extension)
+                // or a decrypted file (remove .enc extension)
+                const isEncryptedDownload = !fileName.includes('?') && !response.headers.get('X-Original-Name');
+                a.download = isEncryptedDownload ? fileName : fileName.replace('.enc', '');
+                
                 document.body.appendChild(a);
                 a.click();
-                
-                // Cleanup
-                window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                showNotification('File downloaded successfully', 'success');
             } catch (error) {
                 console.error('Download error:', error);
-                alert(`Failed to download file: ${error.message}`);
+                showNotification(`Failed to download file: ${error.message}`, 'error');
             }
         }
 
@@ -813,8 +815,12 @@ async function handleFileDecryption(formData, fileInput, responseElement) {
         throw new Error(errorData.error || 'Decryption failed');
     }
 
-    await downloadDecryptedFile(response);
-    responseElement.textContent = `File decrypted successfully: ${getFileName(response)}`;
+    // Get the filename before downloading (as headers might not be accessible after consumption)
+    const fileName = getFileName(response);
+    
+    await downloadDecryptedFile(response, fileName);
+    
+    responseElement.textContent = `Data decrypted successfully! File: ${fileName}`;
     responseElement.className = 'response success';
     fileInput.value = '';
 }
@@ -842,9 +848,8 @@ async function handleTextDecryption(formData, textInput, responseElement) {
     document.getElementById('textToDecrypt').value = '';
 }
 
-async function downloadDecryptedFile(response) {
+async function downloadDecryptedFile(response, fileName) {
     const blob = await response.blob();
-    const fileName = getFileName(response);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -856,7 +861,24 @@ async function downloadDecryptedFile(response) {
 }
 
 function getFileName(response) {
-    return response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'decrypted_file';
+    // Try to extract filename from Content-Disposition header
+    const contentDisposition = response.headers.get('Content-Disposition');
+    if (contentDisposition) {
+        // Extract filename from the Content-Disposition header
+        const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+        if (filenameMatch && filenameMatch[1]) {
+            return filenameMatch[1];
+        }
+    }
+    
+    // Try to get original filename from X-Original-Name header
+    const originalName = response.headers.get('X-Original-Name');
+    if (originalName) {
+        return originalName;
+    }
+    
+    // Fallback to generic name if everything else fails
+    return 'decrypted_file';
 }
 
 // Helper function for file size formatting
@@ -965,7 +987,12 @@ async function downloadStoredFile(fileName) {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = fileName.replace('.enc', '');
+        
+        // Check if this is an encrypted file being downloaded directly (keep .enc extension)
+        // or a decrypted file (remove .enc extension)
+        const isEncryptedDownload = !fileName.includes('?') && !response.headers.get('X-Original-Name');
+        a.download = isEncryptedDownload ? fileName : fileName.replace('.enc', '');
+        
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

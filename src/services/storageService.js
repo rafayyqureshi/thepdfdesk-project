@@ -83,9 +83,9 @@ class StorageService {
         // Try to get the container client for this storage code
         let containerClient = this.containerClients.get(code);
         
-        // If not found, use default
-        if (!containerClient) {
-            logger.warn(`Container client not found for storage code: ${code}, using default`);
+        // If no storage code was specified (null/undefined), we can use default as fallback
+        if (!containerClient && !storageCode) {
+            logger.info(`No storage code specified, using default storage`);
             containerClient = this.containerClients.get(azureConfig.storage.defaultCode);
             
             // If default not found, return null
@@ -93,6 +93,11 @@ class StorageService {
                 logger.error('Default container client not found');
                 return null;
             }
+        } 
+        // If a specific storage code was requested but not found, DO NOT fall back to default (enforce isolation)
+        else if (!containerClient && storageCode) {
+            logger.warn(`Container client not found for storage code: ${code}, enforcing storage isolation`);
+            return null;
         }
         
         return containerClient;
@@ -109,13 +114,21 @@ class StorageService {
                 throw new Error(`Storage service is not available for code: ${storageCode || 'default'}`);
             }
             
-            // Add storage code to metadata
+            // Ensure original filename is preserved in metadata
             const enhancedMetadata = {
                 ...metadata,
-                storageCode: storageCode || azureConfig.storage.defaultCode
+                storageCode: storageCode || azureConfig.storage.defaultCode,
+                originalFileName: metadata.originalFileName || fileName
             };
             
-            const blockBlobClient = containerClient.getBlockBlobClient(fileName);
+            // Use the exact filename provided by the encryption service without any modifications
+            // Trust that the encryption service has already created a clean filename
+            // Do not process or modify the filename anymore to avoid adding timestamps or other characters
+            const safeFileName = fileName;
+            
+            logger.info(`Uploading file to storage with exact name: "${safeFileName}" (code: ${storageCode || 'default'})`);
+            
+            const blockBlobClient = containerClient.getBlockBlobClient(safeFileName);
             
             await blockBlobClient.upload(data, data.length, {
                 metadata: enhancedMetadata
@@ -125,7 +138,7 @@ class StorageService {
             
             return {
                 success: true,
-                fileName,
+                fileName: safeFileName, // Return exactly the same filename that was passed in
                 url,
                 metadata: enhancedMetadata,
                 storageCode: storageCode || azureConfig.storage.defaultCode
@@ -201,12 +214,19 @@ class StorageService {
                     const blobClient = containerClient.getBlobClient(blob.name);
                     const properties = await blobClient.getProperties();
                     
+                    // IMPORTANT: Always use the requested storage code for display consistency
+                    // The user is viewing this specific storage location, so all files should 
+                    // be shown as belonging to this location for UI clarity
+                    const displayStorageCode = storageCode;
+                    
                     files.push({
                         name: blob.name,
                         url: blobClient.url,
                         size: blob.properties.contentLength,
                         timestamp: blob.properties.createdOn,
-                        metadata: properties.metadata
+                        metadata: properties.metadata,
+                        storageCode: displayStorageCode, // Use the requested storage location
+                        originalMetadataStorageCode: properties.metadata?.storageCode // Keep original for reference
                     });
                 } catch (error) {
                     logger.error(`Error getting properties for blob ${blob.name}: ${error.message}`);
@@ -217,6 +237,7 @@ class StorageService {
             
             return {
                 success: true,
+                requestedStorageCode: storageCode, // Include the requested storage code
                 files: files.sort((a, b) => b.timestamp - a.timestamp)
             };
         } catch (error) {
@@ -236,15 +257,56 @@ class StorageService {
                 throw new Error(`Storage service is not available for code: ${storageCode || 'default'}`);
             }
             
-            const blockBlobClient = containerClient.getBlockBlobClient(fileName);
+            logger.info(`Downloading file ${fileName} from storage ${storageCode || 'default'}`);
+            
+            // Try with the exact filename first
+            let cleanFileName = fileName;
+            
+            // Check if the blob exists first
+            let blockBlobClient = containerClient.getBlockBlobClient(cleanFileName);
+            let exists = await blockBlobClient.exists();
+            
+            // If not found and the name doesn't already have a timestamp pattern, try to list all blobs
+            // to find a match with timestamp
+            if (!exists && !cleanFileName.match(/-\d{13,14}\.enc$/)) {
+                logger.info(`File ${cleanFileName} not found directly, searching for similar filenames`);
+                
+                // Extract base name (without extension)
+                const baseNameMatch = cleanFileName.match(/^(.+?)(?:\.enc)?$/);
+                const baseName = baseNameMatch ? baseNameMatch[1] : cleanFileName;
+                
+                // Find all blobs that start with this base name
+                const matchingBlobs = [];
+                for await (const blob of containerClient.listBlobsFlat({ prefix: baseName })) {
+                    matchingBlobs.push(blob.name);
+                }
+                
+                if (matchingBlobs.length > 0) {
+                    logger.info(`Found ${matchingBlobs.length} potential matches: ${matchingBlobs.join(', ')}`);
+                    
+                    // Use the first matching blob (could be sorted by recency)
+                    cleanFileName = matchingBlobs[0];
+                    blockBlobClient = containerClient.getBlockBlobClient(cleanFileName);
+                    exists = true;
+                    logger.info(`Using closest match: ${cleanFileName}`);
+                }
+            }
+            
+            if (!exists) {
+                throw new Error(`The specified blob ${fileName} does not exist in storage location ${storageCode || 'default'}`);
+            }
+            
             const downloadResponse = await blockBlobClient.download(0);
             const properties = await blockBlobClient.getProperties();
+            
+            logger.info(`Successfully downloaded file ${cleanFileName} from ${storageCode || 'default'}`);
             
             return {
                 success: true,
                 data: await this.streamToBuffer(downloadResponse.readableStreamBody),
                 metadata: properties,
-                storageCode: storageCode || azureConfig.storage.defaultCode
+                storageCode: storageCode || azureConfig.storage.defaultCode,
+                fileName: cleanFileName
             };
         } catch (error) {
             logger.error(`File download failed: ${error.message}`);
