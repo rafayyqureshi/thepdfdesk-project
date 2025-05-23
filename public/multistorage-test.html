@@ -1,0 +1,2154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KeyVaultManager Multi-Storage Test UI</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0 -10px;
+        }
+        .col {
+            flex: 1;
+            padding: 0 10px;
+            min-width: 300px;
+        }
+        .panel {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], select, textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            position: relative;
+            z-index: 10;
+            pointer-events: auto;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        pre {
+            background-color: #f8f9fa;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 10px;
+            overflow: auto;
+            max-height: 300px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .storage-badge {
+            display: inline-block;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        .default-badge {
+            background-color: #e9f5fe;
+            color: #3498db;
+            border: 1px solid #3498db;
+        }
+        .clienta-badge {
+            background-color: #e8f8f5;
+            color: #16a085;
+            border: 1px solid #16a085;
+        }
+        .clientb-badge {
+            background-color: #fef5e9;
+            color: #f39c12;
+            border: 1px solid #f39c12;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top-color: #3498db;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 4px 4px 0 0;
+        }
+        .tab.active {
+            background-color: white;
+            border-color: #ddd;
+            color: #3498db;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .key-button {
+            padding: 8px;
+            margin: 4px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+        
+        .key-button:hover {
+            filter: brightness(95%);
+        }
+        
+        .key-button-default {
+            background-color: #e8f4fd;
+        }
+        
+        .key-button-client {
+            background-color: #eef8e7;
+        }
+        
+        .key-button-custom {
+            background-color: #fff8e6;
+        }
+        
+        #keys-list {
+            max-height: 150px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 8px;
+            scrollbar-width: thin;
+        }
+        
+        /* Styling for WebKit browsers (Chrome, Safari) */
+        #keys-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        #keys-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        #keys-list::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        
+        #keys-list::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+<body>
+    <h1>KeyVaultManager Multi-Storage Test UI</h1>
+    <p>Use this interface to test the multi-storage functionality of KeyVaultManager</p>
+
+    <div class="container">
+        <h2>API Settings</h2>
+        <div class="row">
+            <div class="col">
+                <label for="api-url">API Base URL:</label>
+                <input type="text" id="api-url" value="https://localhost:3000/api" />
+            </div>
+            <div class="col">
+                <label for="api-key">API Key:</label>
+                <input type="text" id="api-key" value="api-key-mvp-2024" />
+            </div>
+            <div class="col">
+                <label for="license-key">License Key:</label>
+                <input type="text" id="license-key" value="keyvaultmanager-mvp-2024" />
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" data-tab="storage-info">Storage Info</div>
+            <div class="tab" data-tab="key-management">Key Management</div>
+            <div class="tab" data-tab="file-operations">File Operations</div>
+            <div class="tab" data-tab="multi-storage-tests">Multi-Storage Tests</div>
+        </div>
+
+        <!-- Storage Info Tab -->
+        <div class="tab-content active" id="storage-info">
+            <h2>1. Storage Locations</h2>
+            <button id="list-storage-locations">List Storage Locations</button>
+            <div id="storage-locations-result"></div>
+            
+            <h2>2. Files Overview</h2>
+            <button id="list-all-files">List All Files</button>
+            <div id="files-result"></div>
+        </div>
+
+        <!-- Key Management Tab -->
+        <div class="tab-content" id="key-management">
+            <h2>Key Management</h2>
+            <div class="panel">
+                <h3>Generate New Key</h3>
+                <div class="row">
+                    <div class="col">
+                        <label for="key-name">Key Name:</label>
+                        <input type="text" id="key-name" value="test-key" />
+                    </div>
+                    <div class="col">
+                        <label for="key-type">Key Type:</label>
+                        <select id="key-type">
+                            <option value="AES">AES</option>
+                            <option value="RSA">RSA</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label for="key-length">Key Length:</label>
+                        <select id="key-length">
+                            <option value="128">128 bits</option>
+                            <option value="192">192 bits</option>
+                            <option value="256" selected>256 bits</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="generate-key">Generate Key</button>
+                <div id="generate-key-result"></div>
+            </div>
+            
+            <div class="panel">
+                <h3>Retrieve Key</h3>
+                <div class="row">
+                    <div class="col">
+                        <label for="retrieve-key-name">Key Name:</label>
+                        <input type="text" id="retrieve-key-name" value="test-key" />
+                    </div>
+                </div>
+                <button id="retrieve-key">Retrieve Key</button>
+                <div id="retrieve-key-result"></div>
+            </div>
+        </div>
+
+        <!-- File Operations Tab -->
+        <div class="tab-content" id="file-operations">
+            <h2>File Operations</h2>
+            <div class="panel">
+                <h3>Encrypt File</h3>
+                <div class="row">
+                    <div class="col">
+                        <label for="encrypt-key-name">Key Name:</label>
+                        <input type="text" id="encrypt-key-name" value="test-key" />
+                    </div>
+                    <div class="col">
+                        <label for="encrypt-storage-code">Storage Location:</label>
+                        <select id="encrypt-storage-code">
+                            <option value="">Default Storage</option>
+                            <option value="clienta">Client A</option>
+                            <option value="clientb">Client B</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <label for="encrypt-file">File to Encrypt:</label>
+                        <input type="file" id="encrypt-file" />
+                    </div>
+                    <div class="col">
+                        <label>Or Text to Encrypt:</label>
+                        <textarea id="encrypt-text" rows="3" placeholder="Enter text to encrypt if not uploading a file"></textarea>
+                    </div>
+                </div>
+                <button id="encrypt-data">Encrypt Data</button>
+                <div id="encrypt-result"></div>
+            </div>
+
+            <div class="panel">
+                <h3>Decrypt File</h3>
+                <div class="row">
+                    <div class="col">
+                        <label for="decrypt-key-name">Key Name:</label>
+                        <input type="text" id="decrypt-key-name" value="test-key" />
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <label for="decrypt-file">File to Decrypt:</label>
+                        <input type="file" id="decrypt-file" />
+                    </div>
+                </div>
+                <button id="decrypt-data">Decrypt Data</button>
+                <div id="decrypt-result"></div>
+            </div>
+        </div>
+
+        <!-- Multi-Storage Tests Tab -->
+        <div class="tab-content" id="multi-storage-tests">
+            <h2>Multi-Storage Tests</h2>
+            
+            <div class="panel">
+                <h3>1. List Files by Storage Location</h3>
+                <div class="row">
+                    <div class="col">
+                        <label for="list-files-storage">Storage Location:</label>
+                        <select id="list-files-storage">
+                            <option value="">All Locations</option>
+                            <option value="default">Default Storage</option>
+                            <option value="clienta">Client A</option>
+                            <option value="clientb">Client B</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="list-files-by-storage">List Files</button>
+                <div id="list-files-result"></div>
+            </div>
+
+            <div class="panel">
+                <h3>2. Download File from Storage</h3>
+                <div class="row">
+                    <div class="col">
+                        <label for="download-filename">File Name:</label>
+                        <input type="text" id="download-filename" placeholder="example.enc" />
+                    </div>
+                    <div class="col">
+                        <label for="download-storage">Storage Location:</label>
+                        <select id="download-storage">
+                            <option value="">Default Storage</option>
+                            <option value="clienta">Client A</option>
+                            <option value="clientb">Client B</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="download-file">Download File</button>
+                <div id="download-result"></div>
+            </div>
+
+            <div class="panel">
+                <h3>3. Retrieve and Decrypt in One Operation</h3>
+                <p style="margin-bottom: 20px; color: #666;">Files are loaded automatically when you select a storage location. Click a key to immediately retrieve and decrypt the document.</p>
+                <div class="row">
+                    <div class="col">
+                        <label for="retrieve-storage">1. Select Storage Location:</label>
+                        <div style="display: flex; align-items: center;">
+                            <select id="retrieve-storage" style="flex-grow: 1; margin-right: 8px;">
+                                <option value="">Default Storage</option>
+                                <option value="clienta">Client A</option>
+                                <option value="clientb">Client B</option>
+                            </select>
+                            <button onclick="loadFilesForRetrieval()" style="white-space: nowrap; padding: 8px 12px;">Load Files</button>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <label for="file-select">2. Select File:</label>
+                        <select id="file-select" size="5" style="height: 120px; width: 100%;">
+                            <option disabled selected>Loading files...</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label>3. Click a Key to Decrypt:</label>
+                        <div id="keys-list">
+                            <div class="key-button key-button-default" onclick="directDecrypt('test-key')">
+                                <span style="margin-right: 8px; font-size: 16px;">🔑</span>
+                                <span style="flex-grow: 1;">test-key</span>
+                                <span style="color: #666; font-size: 13px;">default</span>
+                            </div>
+                            <div class="key-button key-button-client" onclick="directDecrypt('test-key-c223')">
+                                <span style="margin-right: 8px; font-size: 16px;">🔑</span>
+                                <span style="flex-grow: 1;">test-key-c223</span>
+                                <span style="color: #666; font-size: 13px;">client files</span>
+                            </div>
+                            <div class="key-button key-button-custom" onclick="directDecrypt('my-test-key')">
+                                <span style="margin-right: 8px; font-size: 16px;">🔑</span>
+                                <span style="flex-grow: 1;">my-test-key</span>
+                                <span style="color: #666; font-size: 13px;">custom</span>
+                            </div>
+                            <div class="key-button key-button-default" onclick="directDecrypt('aes-key')">
+                                <span style="margin-right: 8px; font-size: 16px;">🔑</span>
+                                <span style="flex-grow: 1;">aes-key</span>
+                                <span style="color: #666; font-size: 13px;">encryption</span>
+                            </div>
+                            <div class="key-button key-button-client" onclick="directDecrypt('client-key-1')">
+                                <span style="margin-right: 8px; font-size: 16px;">🔑</span>
+                                <span style="flex-grow: 1;">client-key-1</span>
+                                <span style="color: #666; font-size: 13px;">client A</span>
+                            </div>
+                            <div class="key-button key-button-custom" onclick="directDecrypt('secure-key-256')">
+                                <span style="margin-right: 8px; font-size: 16px;">🔑</span>
+                                <span style="flex-grow: 1;">secure-key-256</span>
+                                <span style="color: #666; font-size: 13px;">256-bit</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Add custom key input option -->
+                        <div style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
+                            <div style="font-weight: bold; margin-bottom: 8px;">Use Custom Key:</div>
+                            <div style="display: flex;">
+                                <input type="text" id="custom-key-input" placeholder="Enter custom key name" style="flex-grow: 1; margin-right: 8px;">
+                                <button onclick="useCustomKey()" style="white-space: nowrap;">Use Key</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="retrieve-result" style="margin-top: 20px;"></div>
+            </div>
+
+            <div class="panel">
+                <h3>4. Cross-Storage Test (Should Fail)</h3>
+                <p>This test attempts to download a file from a different storage than where it was uploaded.</p>
+                <div class="row">
+                    <div class="col">
+                        <label for="cross-filename">File Name:</label>
+                        <input type="text" id="cross-filename" placeholder="example.enc" />
+                    </div>
+                    <div class="col">
+                        <label for="cross-original">Original Storage:</label>
+                        <select id="cross-original">
+                            <option value="">Default Storage</option>
+                            <option value="clienta" selected>Client A</option>
+                            <option value="clientb">Client B</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label for="cross-target">Target Storage:</label>
+                        <select id="cross-target">
+                            <option value="">Default Storage</option>
+                            <option value="clienta">Client A</option>
+                            <option value="clientb" selected>Client B</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="cross-storage-test" onclick="crossStorageTest()">Test Cross-Storage Access</button>
+                <div id="cross-storage-result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Helper functions
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = '<div class="loading"></div> Loading...';
+        }
+
+        function showSuccess(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="success">${message}</div>`;
+        }
+
+        function showError(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        function showResult(elementId, data) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+
+        function renderStorageLocations(locations) {
+            const element = document.getElementById('storage-locations-result');
+            
+            if (!locations || !locations.length) {
+                element.innerHTML = '<div class="error">No storage locations found.</div>';
+                return;
+            }
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Storage Code</th>
+                            <th>Description</th>
+                            <th>Container Name</th>
+                            <th>Default</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            locations.forEach(location => {
+                const badgeClass = location.code === 'default' ? 'default-badge' : 
+                                  location.code === 'clienta' ? 'clienta-badge' : 
+                                  location.code === 'clientb' ? 'clientb-badge' : '';
+                
+                html += `
+                    <tr>
+                        <td><span class="storage-badge ${badgeClass}">${location.code}</span></td>
+                        <td>${location.description}</td>
+                        <td>${location.containerName}</td>
+                        <td>${location.isDefault ? 'Yes' : 'No'}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                    </tbody>
+                </table>
+            `;
+
+            element.innerHTML = html;
+        }
+
+        function renderFiles(files, elementId = 'files-result') {
+            const element = document.getElementById(elementId);
+            
+            if (!files || !files.length) {
+                element.innerHTML = '<div class="error">No files found.</div>';
+                return;
+            }
+
+            // If we're viewing a specific storage location, get it from the dropdown
+            let forcedStorageCode = null;
+            if (elementId === 'list-files-result') {
+                forcedStorageCode = document.getElementById('list-files-storage').value || null;
+            }
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>File Name</th>
+                            <th>Storage Location</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            files.forEach(file => {
+                // Determine which storage code to display
+                // Use forced storage code for specific views, otherwise use file's storage code
+                const displayStorageCode = forcedStorageCode || file.storageCode || 'default';
+                
+                const badgeClass = displayStorageCode === 'default' ? 'default-badge' : 
+                                  displayStorageCode === 'clienta' ? 'clienta-badge' : 
+                                  displayStorageCode === 'clientb' ? 'clientb-badge' : '';
+                
+                html += `
+                    <tr>
+                        <td>${file.name}</td>
+                        <td><span class="storage-badge ${badgeClass}">${displayStorageCode}</span></td>
+                        <td>${file.size ? (file.size / 1024).toFixed(2) + ' KB' : 'N/A'}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                    </tbody>
+                </table>
+            `;
+
+            element.innerHTML = html;
+        }
+
+        // API functions
+        async function makeApiRequest(endpoint, method = 'GET', body = null, isFormData = false) {
+            const baseUrl = document.getElementById('api-url').value.trim();
+            const apiKey = document.getElementById('api-key').value.trim();
+            const licenseKey = document.getElementById('license-key').value.trim();
+
+            const headers = {
+                'x-api-key': apiKey,
+                'x-license-key': licenseKey
+            };
+
+            if (!isFormData && body && method !== 'GET') {
+                headers['Content-Type'] = 'application/json';
+            }
+
+            const options = {
+                method,
+                headers
+            };
+
+            if (body && method !== 'GET') {
+                options.body = isFormData ? body : JSON.stringify(body);
+            }
+
+            try {
+                const response = await fetch(`${baseUrl}${endpoint}`, options);
+                
+                // Log response status and headers for debugging
+                console.log(`API Response Status: ${response.status}`);
+                console.log('API Response Headers:', Object.fromEntries([...response.headers.entries()]));
+                
+                // Special handling for blob responses
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/octet-stream')) {
+                    const blob = await response.blob();
+                    
+                    // Try to get filename from different headers - all header names are lowercase in fetch API
+                    let filename = null;
+                    
+                    // First try original name header (our custom header)
+                    const originalName = response.headers.get('x-original-name');
+                    if (originalName) {
+                        filename = originalName;
+                        console.log("Found x-original-name:", originalName);
+                    }
+                    
+                    // Then try Content-Disposition
+                    if (!filename) {
+                        const contentDisposition = response.headers.get('content-disposition');
+                        if (contentDisposition) {
+                            const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+                            if (filenameMatch && filenameMatch[1]) {
+                                filename = filenameMatch[1];
+                                console.log("Found filename in content-disposition:", filename);
+                            }
+                        }
+                    }
+                    
+                    // If still no filename found, use a default
+                    if (!filename) {
+                        // For decrypt operations, try to use original file name without .enc
+                        if (endpoint.includes('/decrypt') && body instanceof FormData) {
+                            const fileInput = body.get('file');
+                            if (fileInput && fileInput.name) {
+                                // Remove .enc extension if present
+                                filename = fileInput.name.replace(/\.enc$/i, '');
+                                console.log("Using input filename without .enc:", filename);
+                            }
+                        }
+                        
+                        // Last resort fallback
+                        if (!filename) {
+                            filename = 'downloaded_file';
+                            console.log("Using default filename");
+                        }
+                    }
+                    
+                    console.log(`Final filename: ${filename}, Headers:`, 
+                        Object.fromEntries([...response.headers.entries()]));
+                    
+                    return { 
+                        success: response.ok, 
+                        blob, 
+                        filename,
+                        headers: {
+                            'Content-Disposition': response.headers.get('content-disposition'),
+                            'X-Storage-Code': response.headers.get('x-storage-code'),
+                            'X-Original-Name': response.headers.get('x-original-name'),
+                            'X-Original-Extension': response.headers.get('x-original-extension')
+                        }
+                    };
+                }
+
+                if (!response.ok) {
+                    // Try to get detailed error information
+                    let errorMessage = `HTTP error ${response.status}`;
+                    try {
+                        // Try to parse error as JSON first
+                        const errorJson = await response.json();
+                        console.error('Error response body:', errorJson);
+                        errorMessage = errorJson.error || errorJson.message || errorMessage;
+                    } catch (jsonError) {
+                        // If it's not JSON, try to get it as text
+                        try {
+                            const errorText = await response.clone().text();
+                            console.error('Error response text:', errorText);
+                            errorMessage = errorText || errorMessage;
+                        } catch (textError) {
+                            console.error('Could not read error response as text:', textError);
+                        }
+                    }
+                    return { success: false, error: errorMessage, status: response.status };
+                }
+                
+                const data = await response.json().catch(() => ({}));
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                console.error('API request error:', error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function listStorageLocations() {
+            showLoading('storage-locations-result');
+            const result = await makeApiRequest('/storageLocations');
+            
+            if (result.success) {
+                renderStorageLocations(result.data.locations);
+                // Also update storage dropdowns
+                updateStorageDropdowns(result.data.locations);
+            } else {
+                showError('storage-locations-result', `Failed to fetch storage locations: ${result.error || 'Unknown error'}`);
+            }
+        }
+
+        function updateStorageDropdowns(locations) {
+            const dropdowns = [
+                'encrypt-storage-code',
+                'list-files-storage',
+                'download-storage',
+                'retrieve-storage',
+                'cross-original',
+                'cross-target'
+            ];
+
+            dropdowns.forEach(id => {
+                const dropdown = document.getElementById(id);
+                if (!dropdown) return;
+
+                // Save current selection
+                const currentValue = dropdown.value;
+                
+                // Clear options (except the default)
+                while (dropdown.options.length > 0) {
+                    dropdown.remove(0);
+                }
+
+                // Add options based on available storage locations
+                if (id === 'list-files-storage') {
+                    const allOption = document.createElement('option');
+                    allOption.value = '';
+                    allOption.text = 'All Locations';
+                    dropdown.add(allOption);
+                }
+
+                locations.forEach(location => {
+                    const option = document.createElement('option');
+                    option.value = location.code;
+                    option.text = location.description || location.code;
+                    if (location.isDefault) {
+                        option.text += ' (Default)';
+                    }
+                    dropdown.add(option);
+                });
+
+                // Restore selection if possible
+                if (currentValue) {
+                    for (let i = 0; i < dropdown.options.length; i++) {
+                        if (dropdown.options[i].value === currentValue) {
+                            dropdown.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+            });
+        }
+
+        async function listAllFiles() {
+            showLoading('files-result');
+            const result = await makeApiRequest('/listFiles');
+            
+            if (result.success) {
+                renderFiles(result.data.files);
+            } else {
+                showError('files-result', `Failed to fetch files: ${result.error || 'Unknown error'}`);
+            }
+        }
+
+        async function listFilesByStorage() {
+            const storageDropdown = document.getElementById('list-files-storage');
+            const selectedStorageCode = storageDropdown.value;
+            const selectedStorageText = storageDropdown.options[storageDropdown.selectedIndex].text;
+            
+            showLoading('list-files-result');
+            
+            const endpoint = selectedStorageCode ? `/listFiles?storageCode=${selectedStorageCode}` : '/listFiles';
+            const result = await makeApiRequest(endpoint);
+            
+            if (result.success && result.data.files && result.data.files.length > 0) {
+                // Rather than using the renderFiles function, we'll create the HTML directly
+                // This ensures we completely control the display
+                let html = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>File Name</th>
+                                <th>Storage Location</th>
+                                <th>Size</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                // Use the selected storage code for all files
+                const displayStorageCode = selectedStorageCode || 'default';
+                const badgeClass = displayStorageCode === 'default' ? 'default-badge' : 
+                                  displayStorageCode === 'clienta' ? 'clienta-badge' : 
+                                  displayStorageCode === 'clientb' ? 'clientb-badge' : '';
+                
+                // Create table rows with the forced storage code
+                result.data.files.forEach(file => {
+                    html += `
+                        <tr>
+                            <td>${file.name}</td>
+                            <td><span class="storage-badge ${badgeClass}">${selectedStorageText || displayStorageCode}</span></td>
+                            <td>${file.size ? (file.size / 1024).toFixed(2) + ' KB' : 'N/A'}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                        </tbody>
+                    </table>
+                `;
+
+                // Set the HTML directly
+                document.getElementById('list-files-result').innerHTML = html;
+                
+            } else if (result.success && (!result.data.files || result.data.files.length === 0)) {
+                showError('list-files-result', 'No files found in this storage location.');
+            } else {
+                showError('list-files-result', `Failed to fetch files: ${result.error || 'Unknown error'}`);
+            }
+        }
+
+        async function generateKey() {
+            const keyName = document.getElementById('key-name').value.trim();
+            const keyType = document.getElementById('key-type').value;
+            const keyLength = document.getElementById('key-length').value;
+            
+            if (!keyName) {
+                showError('generate-key-result', 'Key name is required');
+                return;
+            }
+            
+            showLoading('generate-key-result');
+            const result = await makeApiRequest('/generateKey', 'POST', {
+                keyName, 
+                keyType, 
+                keyLength: parseInt(keyLength)
+            });
+            
+            if (result.success) {
+                showSuccess('generate-key-result', `Key "${keyName}" generated successfully`);
+                setTimeout(() => showResult('generate-key-result', result.data), 1000);
+                
+                // Save the key to local storage history
+                saveKeyToHistory(keyName, keyType, keyLength);
+                
+                // Refresh the key list
+                listAllKeys('keys-list');
+            } else {
+                showError('generate-key-result', `Failed to generate key: ${result.data?.error || 'Unknown error'}`);
+            }
+        }
+
+        async function retrieveKey() {
+            const keyName = document.getElementById('retrieve-key-name').value.trim();
+            
+            if (!keyName) {
+                showError('retrieve-key-result', 'Key name is required');
+                return;
+            }
+            
+            showLoading('retrieve-key-result');
+            const result = await makeApiRequest('/retrieveKey', 'POST', {
+                keyName
+            });
+            
+            if (result.success) {
+                showSuccess('retrieve-key-result', `Key "${keyName}" retrieved successfully`);
+                setTimeout(() => showResult('retrieve-key-result', result.data), 1000);
+            } else {
+                showError('retrieve-key-result', `Failed to retrieve key: ${result.data?.error || 'Unknown error'}`);
+            }
+        }
+
+        async function encryptData() {
+            const keyName = document.getElementById('encrypt-key-name').value.trim();
+            const storageCode = document.getElementById('encrypt-storage-code').value;
+            const file = document.getElementById('encrypt-file').files[0];
+            const text = document.getElementById('encrypt-text').value.trim();
+            
+            if (!keyName) {
+                showError('encrypt-result', 'Key name is required');
+                return;
+            }
+            
+            if (!file && !text) {
+                showError('encrypt-result', 'Either file or text is required for encryption');
+                return;
+            }
+            
+            showLoading('encrypt-result');
+            
+            const formData = new FormData();
+            formData.append('keyName', keyName);
+            formData.append('useStorage', 'true');
+            
+            if (storageCode) {
+                formData.append('storageCode', storageCode);
+            }
+            
+            if (file) {
+                formData.append('file', file);
+            } else {
+                formData.append('data', text);
+            }
+            
+            const result = await makeApiRequest('/encrypt', 'POST', formData, true);
+            
+            if (result.success) {
+                // Read the blob to extract the actualStorageCode if present
+                let actualStorageCode = result.headers['X-Storage-Code'] || 'default';
+                let displayFileName = 'encrypted_file';
+                
+                try {
+                    // Clone the blob before reading it as text
+                    const blobClone = result.blob.slice(0, result.blob.size, result.blob.type);
+                    const blobText = await blobClone.text();
+                    const blobData = JSON.parse(blobText);
+                    
+                    // Use the actual storage code from the response if available
+                    if (blobData.actualStorageCode) {
+                        actualStorageCode = blobData.actualStorageCode;
+                    } else if (blobData.storageDetails && blobData.storageDetails.storageCode) {
+                        actualStorageCode = blobData.storageDetails.storageCode;
+                    }
+                    
+                    // Clean up the filename for display
+                    if (blobData.storageDetails && blobData.storageDetails.fileName) {
+                    // Get the filename from storage details
+                    displayFileName = blobData.storageDetails.fileName;
+                    
+                    // Remove any timestamp pattern if still present
+                    displayFileName = displayFileName.replace(/-\d{13,14}(?=\.enc$)/, '');
+                    
+                    // No need to remove the original extension - we want to keep it
+                    // Just make sure it ends with .enc
+                    if (!displayFileName.endsWith('.enc')) {
+                        displayFileName = displayFileName + '.enc';
+                    }
+                } else if (file) {
+                        // Preserve the original extension when creating the filename
+                        const originalName = file.name;
+                        displayFileName = originalName + '.enc';
+                    }
+                } catch (error) {
+                    console.error('Error parsing response data:', error);
+                    // If there's an error parsing, use a sanitized filename
+                    if (file) {
+                        const nameWithoutExt = file.name.split('.').slice(0, -1).join('.');
+                        displayFileName = nameWithoutExt + '.enc';
+                    }
+                }
+                
+                showSuccess(
+                    'encrypt-result', 
+                    `Data encrypted successfully! File: ${displayFileName}, Storage: ${actualStorageCode}`
+                );
+                
+                // Initialize download
+                const downloadUrl = URL.createObjectURL(result.blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = displayFileName;
+                a.textContent = 'Click here to download the encrypted file';
+                a.style.display = 'block';
+                a.style.marginTop = '10px';
+                
+                document.getElementById('encrypt-result').appendChild(a);
+                
+                // Refresh the file list
+                listAllFiles();
+            } else {
+                showError('encrypt-result', `Encryption failed: ${result.error || 'Unknown error'}`);
+            }
+        }
+
+        async function decryptData() {
+            const file = document.getElementById('decrypt-file').files[0];
+            const keyName = document.getElementById('decrypt-key-name').value.trim();
+            
+            if (!file) {
+                showError('decrypt-result', 'Please select a file to decrypt');
+                return;
+            }
+            
+            if (!keyName) {
+                showError('decrypt-result', 'Key name is required');
+                return;
+            }
+            
+            showLoading('decrypt-result');
+            
+            // Get original filename (without .enc if present) for better user experience
+            let originalFileName = file.name;
+            if (originalFileName.toLowerCase().endsWith('.enc')) {
+                originalFileName = originalFileName.slice(0, -4);
+            }
+            
+            const formData = new FormData();
+            formData.append('keyName', keyName);
+            formData.append('file', file);
+            
+            const result = await makeApiRequest('/decrypt', 'POST', formData, true);
+            
+            if (result.success) {
+                // Get filename from the response or fall back to a processed version of the original
+                const filename = result.filename || originalFileName || 'decrypted_file';
+                
+                showSuccess(
+                    'decrypt-result', 
+                    `Data decrypted successfully! File: ${filename}`
+                );
+                
+                // Initialize download
+                const downloadUrl = URL.createObjectURL(result.blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = filename;
+                a.textContent = 'Click here to download the decrypted file';
+                a.style.display = 'block';
+                a.style.marginTop = '10px';
+                
+                document.getElementById('decrypt-result').appendChild(a);
+            } else {
+                showError('decrypt-result', `Decryption failed: ${result.error || 'Unknown error'}`);
+            }
+        }
+
+        async function downloadFile(fileName, storageCode) {
+            if (!fileName) {
+                const inputField = document.getElementById('download-filename');
+                if (inputField) {
+                    fileName = inputField.value.trim();
+                    storageCode = document.getElementById('download-storage').value;
+                }
+                
+                if (!fileName) {
+                    showError('download-result', 'File name is required');
+                    return;
+                }
+                
+                showLoading('download-result');
+            } else {
+                // This is called from the file list
+                showLoading('files-result');
+            }
+            
+            console.log(`Downloading file: ${fileName} from storage: ${storageCode || 'default'}`);
+            
+            // Ensure storageCode is explicitly included in the query
+            const endpoint = `/downloadFile/${fileName}${storageCode ? `?storageCode=${storageCode}` : ''}`;
+            const result = await makeApiRequest(endpoint);
+            
+            const targetId = document.getElementById('download-filename') ? 'download-result' : 'files-result';
+            
+            if (result.success) {
+                // Use the filename returned by the API
+                const filename = result.filename || fileName;
+                
+                showSuccess(
+                    targetId, 
+                    `File downloaded successfully from storage: ${storageCode || 'default'}`
+                );
+                
+                // Initialize download
+                const downloadUrl = URL.createObjectURL(result.blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = filename;
+                a.textContent = 'Click here to save the file';
+                a.style.display = 'block';
+                a.style.marginTop = '10px';
+                
+                document.getElementById(targetId).appendChild(a);
+                
+                if (targetId === 'files-result') {
+                    // Refresh the file list after a short delay
+                    setTimeout(listAllFiles, 2000);
+                }
+            } else {
+                // Check if error message indicates a storage isolation issue
+                const errorMsg = result.error || 'Unknown error';
+                if (errorMsg.includes('not found in') && errorMsg.includes('storage')) {
+                    showError(targetId, `Storage Isolation Test: File "${fileName}" is not accessible in storage "${storageCode || 'default'}". This confirms proper storage isolation.`);
+                } else {
+                    showError(targetId, `Download failed: ${errorMsg}`);
+                }
+            }
+        }
+
+        async function retrieveDocument(fileName, keyName, storageCode) {
+            if (!fileName || !keyName) {
+                const fileNameField = document.getElementById('retrieve-filename');
+                const keyNameField = document.getElementById('retrieve-key-name');
+                
+                if (fileNameField && keyNameField) {
+                    fileName = fileNameField.value.trim();
+                    keyName = keyNameField.value.trim();
+                    storageCode = document.getElementById('retrieve-storage').value;
+                }
+                
+                if (!fileName) {
+                    showError('retrieve-result', 'Document name is required');
+                    return;
+                }
+                
+                if (!keyName) {
+                    showError('retrieve-result', 'Key name is required');
+                    return;
+                }
+                
+                showLoading('retrieve-result');
+            } else {
+                // This is called from the file list
+                showLoading('files-result');
+            }
+            
+            console.log(`Retrieving document: ${fileName} with key: ${keyName} from storage: ${storageCode || 'default'}`);
+            
+            // Get expected original filename (without .enc if present)
+            let originalFileName = fileName;
+            if (originalFileName.toLowerCase().endsWith('.enc')) {
+                originalFileName = originalFileName.slice(0, -4);
+            } else {
+                // If .enc extension is missing, add it for the API request
+                // but keep the original file name for later reference
+                fileName = fileName; // Don't modify the original filename
+                console.log(`File name used as-is: ${fileName}`);
+            }
+            
+            console.log(`Original file name: ${originalFileName}`);
+            console.log(`Actual file name for API: ${fileName}`);
+            
+            // Try a more direct approach without using URLSearchParams
+            // Manually encode each parameter to ensure proper handling of special characters
+            const encodedFileName = encodeURIComponent(fileName);
+            const encodedKeyName = encodeURIComponent(keyName);
+            
+            // Create an absolute safe filename by replacing any problematic characters
+            const safeFileName = fileName
+                .replace(/\(/g, '%28')
+                .replace(/\)/g, '%29')
+                .replace(/\s/g, '%20')
+                .replace(/\+/g, '%2B');
+            
+            let endpoint = `/retrieveDocument?documentName=${safeFileName}&keyName=${encodedKeyName}`;
+            
+            // Ensure storageCode is always included when available
+            if (storageCode) {
+                endpoint += `&storageCode=${encodeURIComponent(storageCode)}`;
+            }
+            
+            console.log(`Manual endpoint construction: ${endpoint}`);
+            console.log(`Full API URL: ${document.getElementById('api-url').value.trim()}${endpoint}`);
+            
+            const result = await makeApiRequest(endpoint);
+            
+            const targetId = document.getElementById('retrieve-filename') ? 'retrieve-result' : 'files-result';
+            
+            if (result.success) {
+                // Get the original name from the API response headers if available
+                let downloadFilename = '';
+                
+                // First try to get the filename from the response headers
+                if (result.headers && result.headers['X-Original-Name']) {
+                    downloadFilename = result.headers['X-Original-Name'];
+                    console.log(`Using original name from header: ${downloadFilename}`);
+                } 
+                // Next, try the filename returned by the API
+                else if (result.filename) {
+                    downloadFilename = result.filename;
+                    console.log(`Using filename from API result: ${downloadFilename}`);
+                } 
+                // Otherwise, use our manually processed filename by removing .enc
+                else if (fileName.toLowerCase().endsWith('.enc')) {
+                    downloadFilename = fileName.slice(0, -4);
+                    console.log(`Manually removed .enc extension: ${downloadFilename}`);
+                } 
+                // Fallback to the original name without processing
+                else {
+                    downloadFilename = originalFileName;
+                    console.log(`Using original filename: ${downloadFilename}`);
+                }
+                
+                console.log(`Final download filename: ${downloadFilename}`);
+                
+                showSuccess(
+                    targetId, 
+                    `✅ Document decrypted successfully!`
+                );
+                
+                // Initialize download
+                const downloadUrl = URL.createObjectURL(result.blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = downloadFilename;
+                a.className = 'download-link';
+                a.innerHTML = '<span style="font-size: 20px;">⬇️</span> Download ' + downloadFilename;
+                a.style.display = 'block';
+                a.style.marginTop = '15px';
+                a.style.textAlign = 'center';
+                a.style.padding = '12px';
+                a.style.backgroundColor = '#28a745';
+                a.style.color = 'white';
+                a.style.textDecoration = 'none';
+                a.style.borderRadius = '4px';
+                a.style.fontWeight = 'bold';
+                
+                document.getElementById(targetId).appendChild(a);
+            } else {
+                // Check if error message indicates a storage isolation issue
+                const errorMsg = result.error || 'Unknown error';
+                if (errorMsg.includes('not found in') && errorMsg.includes('storage')) {
+                    showError(targetId, `Storage Isolation Test: Document "${fileName}" is not accessible in storage "${storageCode || 'default'}". This confirms proper storage isolation.`);
+                } else {
+                    showError(targetId, `Retrieval failed: ${errorMsg}`);
+                    
+                    // Add a fallback button to try downloading the file directly
+                    const fallbackDiv = document.createElement('div');
+                    fallbackDiv.style.marginTop = '15px';
+                    fallbackDiv.innerHTML = `<p>Try fallback methods:</p>`;
+                    
+                    // Fallback 1: Direct download button
+                    const downloadButton = document.createElement('button');
+                    downloadButton.textContent = 'Try Direct Download';
+                    downloadButton.style.marginRight = '10px';
+                    downloadButton.onclick = () => {
+                        // Try downloading using the downloadFile function
+                        downloadFile(fileName, storageCode);
+                    };
+                    fallbackDiv.appendChild(downloadButton);
+                    
+                    // Fallback for decryption error: Try with default key
+                    if (errorMsg.includes("bad decrypt")) {
+                        const defaultKeyButton = document.createElement('button');
+                        defaultKeyButton.textContent = 'Try with "test-key"';
+                        defaultKeyButton.style.marginRight = '10px';
+                        defaultKeyButton.onclick = () => {
+                            // Try retrieving with the default key name
+                            retrieveDocument(fileName, "test-key", storageCode);
+                        };
+                        fallbackDiv.appendChild(defaultKeyButton);
+                        
+                        // Add a message explaining the likely issue
+                        const errorExplanation = document.createElement('p');
+                        errorExplanation.innerHTML = `<strong>Decryption Error:</strong> The key "${keyName}" doesn't match the one used to encrypt this file. Try the default key or check available keys.`;
+                        errorExplanation.style.color = '#721c24';
+                        fallbackDiv.appendChild(errorExplanation);
+                        
+                        // Add a list available keys button
+                        const listKeysButton = document.createElement('button');
+                        listKeysButton.textContent = 'List Available Keys';
+                        listKeysButton.style.marginRight = '10px';
+                        listKeysButton.onclick = async () => {
+                            try {
+                                // The server doesn't have a /listKeys endpoint
+                                // Let's use a hardcoded list of common keys instead
+                                const commonKeys = [
+                                    { name: 'test-key', type: 'AES', category: 'default' },
+                                    { name: 'test-key-c223', type: 'AES', category: 'client' },
+                                    { name: 'my-test-key', type: 'AES', category: 'custom' },
+                                    { name: 'aes-key', type: 'AES', category: 'default' },
+                                    { name: 'client-key-1', type: 'AES', category: 'client' },
+                                    { name: 'secure-key-256', type: 'AES', category: 'custom' },
+                                    { name: 'mvp-key', type: 'AES', category: 'default' },
+                                    { name: 'sprint-key', type: 'AES', category: 'client' }
+                                ];
+                                
+                                const keysList = document.createElement('div');
+                                keysList.innerHTML = `<p><strong>Available Keys:</strong></p><ul>`;
+                                commonKeys.forEach(k => {
+                                    keysList.innerHTML += `<li><button onclick="document.getElementById('retrieve-key-name').value='${k.name}'; retrieveSelectedDocument();"
+                                        style="margin: 2px; padding: 3px; font-size: 12px; width: auto;">
+                                        ${k.name}
+                                    </button></li>`;
+                                });
+                                keysList.innerHTML += `</ul>`;
+                                document.getElementById(targetId).appendChild(keysList);
+                            } catch (err) {
+                                showError(targetId, `Error listing keys: ${err.message}`);
+                            }
+                        };
+                        fallbackDiv.appendChild(listKeysButton);
+                    }
+                    
+                    // Fallback 2: Manual decrypt button (if we can get the file)
+                    const decryptButton = document.createElement('button');
+                    decryptButton.textContent = 'Download + Manual Decrypt';
+                    decryptButton.onclick = async () => {
+                        // First try to download the file
+                        document.getElementById(targetId).innerHTML = '<div class="loading"></div> Attempting alternative download...';
+                        
+                        try {
+                            // Try to download the encrypted file
+                            const downloadEndpoint = `/downloadFile/${encodedFileName}${storageCode ? `?storageCode=${encodeURIComponent(storageCode)}` : ''}`;
+                            const downloadResult = await makeApiRequest(downloadEndpoint);
+                            
+                            if (downloadResult.success && downloadResult.blob) {
+                                showSuccess(targetId, 'Downloaded encrypted file. Please decrypt manually using the key.');
+                                
+                                // Create download link
+                                const downloadUrl = URL.createObjectURL(downloadResult.blob);
+                                const a = document.createElement('a');
+                                a.href = downloadUrl;
+                                a.download = downloadResult.filename || fileName;
+                                a.textContent = `Click to save encrypted file (then decrypt with key: ${keyName})`;
+                                a.style.display = 'block';
+                                a.style.marginTop = '10px';
+                                
+                                document.getElementById(targetId).appendChild(a);
+                            } else {
+                                showError(targetId, `Alternative download failed: ${downloadResult.error || 'Unknown error'}`);
+                            }
+                        } catch (err) {
+                            showError(targetId, `Alternative method failed: ${err.message}`);
+                        }
+                    };
+                    fallbackDiv.appendChild(decryptButton);
+                    
+                    document.getElementById(targetId).appendChild(fallbackDiv);
+                }
+            }
+        }
+
+        async function crossStorageTest() {
+            console.log('crossStorageTest function called');
+            
+            const fileName = document.getElementById('cross-filename').value.trim() || `test-file-${Date.now()}.txt`;
+            const originalStorage = document.getElementById('cross-original').value;
+            const targetStorage = document.getElementById('cross-target').value;
+            
+            console.log(`Cross-storage test parameters: fileName=${fileName}, originalStorage=${originalStorage}, targetStorage=${targetStorage}`);
+            
+            if (!fileName) {
+                showError('cross-storage-result', 'File name is required');
+                return;
+            }
+            
+            if (originalStorage === targetStorage) {
+                showError('cross-storage-result', 'Original storage and target storage must be different for this test');
+                return;
+            }
+            
+            showLoading('cross-storage-result');
+            document.getElementById('cross-storage-result').innerHTML = '<div class="loading"></div> Running cross-storage test...';
+            
+            try {
+                // Step 1: Create a simple test file with some content
+                const testContent = `This is a test file created for cross-storage testing.
+                Original storage: ${originalStorage || 'default'}
+                Target storage: ${targetStorage || 'default'}
+                Timestamp: ${new Date().toISOString()}`;
+                
+                // Create a blob from the test content
+                const testBlob = new Blob([testContent], { type: 'text/plain' });
+                const testFile = new File([testBlob], fileName, { type: 'text/plain' });
+                
+                // Step 2: Show progress
+                document.getElementById('cross-storage-result').innerHTML = `
+                    <div class="panel" style="background-color: #f0f8ff; margin-bottom: 10px;">
+                        <h4>Cross-Storage Test Progress</h4>
+                        <ol>
+                            <li>✅ Created test file: ${fileName}</li>
+                            <li><div class="loading" style="display: inline-block;"></div> Uploading to original storage (${originalStorage || 'default'})...</li>
+                            <li>Attempting to access from target storage (${targetStorage || 'default'})...</li>
+                            <li>Evaluating results...</li>
+                        </ol>
+                    </div>
+                `;
+                
+                // Step 3: Upload the file to the original storage
+                const formData = new FormData();
+                formData.append('file', testFile);
+                formData.append('keyName', 'test-key'); // Using default test key
+                formData.append('useStorage', 'true');
+                formData.append('storageCode', originalStorage);
+                
+                const uploadResult = await makeApiRequest('/encrypt', 'POST', formData, true);
+                
+                if (!uploadResult.success) {
+                    // Update progress with error
+                    document.getElementById('cross-storage-result').innerHTML = `
+                        <div class="panel" style="background-color: #f0f8ff; margin-bottom: 10px;">
+                            <h4>Cross-Storage Test Progress</h4>
+                            <ol>
+                                <li>✅ Created test file: ${fileName}</li>
+                                <li>❌ Failed to upload to original storage (${originalStorage || 'default'}): ${uploadResult.error || 'Unknown error'}</li>
+                                <li>Test aborted</li>
+                                <li>Test inconclusive</li>
+                            </ol>
+                        </div>
+                        <div class="error">Test failed: Could not upload file to original storage. Please check if the storage location is available.</div>
+                    `;
+                    return;
+                }
+                
+                // Get the actual filename used in storage (might include .enc extension)
+                let storedFileName = fileName;
+                if (uploadResult.blob) {
+                    try {
+                        const blobClone = uploadResult.blob.slice(0, uploadResult.blob.size, uploadResult.blob.type);
+                        const blobText = await blobClone.text();
+                        const blobData = JSON.parse(blobText);
+                        
+                        if (blobData.storageDetails && blobData.storageDetails.fileName) {
+                            storedFileName = blobData.storageDetails.fileName;
+                        }
+                    } catch (error) {
+                        console.error('Error parsing upload result:', error);
+                    }
+                }
+                
+                // Ensure filename has .enc extension for the download test
+                if (!storedFileName.toLowerCase().endsWith('.enc')) {
+                    storedFileName += '.enc';
+                }
+                
+                // Step 4: Update progress
+                document.getElementById('cross-storage-result').innerHTML = `
+                    <div class="panel" style="background-color: #f0f8ff; margin-bottom: 10px;">
+                        <h4>Cross-Storage Test Progress</h4>
+                        <ol>
+                            <li>✅ Created test file: ${fileName}</li>
+                            <li>✅ Successfully uploaded to original storage (${originalStorage || 'default'})</li>
+                            <li><div class="loading" style="display: inline-block;"></div> Attempting to access from target storage (${targetStorage || 'default'})...</li>
+                            <li>Evaluating results...</li>
+                        </ol>
+                    </div>
+                `;
+                
+                // Step 5: Try to access the file from the target storage
+                const endpoint = `/downloadFile/${encodeURIComponent(storedFileName)}?storageCode=${encodeURIComponent(targetStorage)}`;
+                console.log(`Cross-storage test endpoint: ${endpoint}`);
+                const result = await makeApiRequest(endpoint);
+                
+                // Step 6: Update progress and show final result
+                if (result.success) {
+                    // This should not happen if storage isolation is working properly
+                    document.getElementById('cross-storage-result').innerHTML = `
+                        <div class="panel" style="background-color: #f0f8ff; margin-bottom: 10px;">
+                            <h4>Cross-Storage Test Progress</h4>
+                            <ol>
+                                <li>✅ Created test file: ${fileName}</li>
+                                <li>✅ Successfully uploaded to original storage (${originalStorage || 'default'})</li>
+                                <li>❌ File was accessible from target storage (${targetStorage || 'default'}) - SECURITY ISSUE!</li>
+                                <li>❌ Test failed - storage isolation is not working</li>
+                            </ol>
+                        </div>
+                        <div class="error">
+                            <h4>⚠️ SECURITY ISSUE DETECTED</h4>
+                            <p>Cross-storage access succeeded! File "${storedFileName}" from ${originalStorage || 'default'} storage was accessible in ${targetStorage || 'default'} storage.</p>
+                            <p>This indicates a problem with storage isolation and should be reported to the system administrator.</p>
+                        </div>
+                    `;
+                    
+                    // Initialize download to prove the file was accessible
+                    const downloadUrl = URL.createObjectURL(result.blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = result.filename || storedFileName;
+                    a.textContent = 'Download the file from the wrong storage (evidence)';
+                    a.className = 'download-link';
+                    a.style.display = 'block';
+                    a.style.marginTop = '15px';
+                    a.style.textAlign = 'center';
+                    a.style.padding = '12px';
+                    a.style.backgroundColor = '#dc3545';
+                    a.style.color = 'white';
+                    a.style.textDecoration = 'none';
+                    a.style.borderRadius = '4px';
+                    a.style.fontWeight = 'bold';
+                    
+                    document.getElementById('cross-storage-result').appendChild(a);
+                } else {
+                    // Check if error message indicates proper storage isolation
+                    const errorMsg = result.error || 'Unknown error';
+                    if (errorMsg.includes('not found in') && errorMsg.includes('storage')) {
+                        document.getElementById('cross-storage-result').innerHTML = `
+                            <div class="panel" style="background-color: #f0f8ff; margin-bottom: 10px;">
+                                <h4>Cross-Storage Test Progress</h4>
+                                <ol>
+                                    <li>✅ Created test file: ${fileName}</li>
+                                    <li>✅ Successfully uploaded to original storage (${originalStorage || 'default'})</li>
+                                    <li>✅ File was NOT accessible from target storage (${targetStorage || 'default'}) - CORRECT BEHAVIOR</li>
+                                    <li>✅ Test passed - storage isolation is working properly</li>
+                                </ol>
+                            </div>
+                            <div class="success">
+                                <h4>✅ SECURITY VERIFIED</h4>
+                                <p>Cross-storage access correctly failed! File "${storedFileName}" from ${originalStorage || 'default'} storage cannot be accessed in ${targetStorage || 'default'} storage.</p>
+                                <p>This confirms proper storage isolation is working as expected.</p>
+                                <p><strong>Error message:</strong> ${errorMsg}</p>
+                            </div>
+                        `;
+                    } else {
+                        // Some other error occurred
+                        document.getElementById('cross-storage-result').innerHTML = `
+                            <div class="panel" style="background-color: #f0f8ff; margin-bottom: 10px;">
+                                <h4>Cross-Storage Test Progress</h4>
+                                <ol>
+                                    <li>✅ Created test file: ${fileName}</li>
+                                    <li>✅ Successfully uploaded to original storage (${originalStorage || 'default'})</li>
+                                    <li>❓ Unexpected error when accessing from target storage (${targetStorage || 'default'})</li>
+                                    <li>❓ Test inconclusive - cannot determine if storage isolation is working</li>
+                                </ol>
+                            </div>
+                            <div class="error">
+                                <h4>Test Inconclusive</h4>
+                                <p>An unexpected error occurred: ${errorMsg}</p>
+                                <p>This could be due to network issues, API problems, or other factors not related to storage isolation.</p>
+                            </div>
+                        `;
+                    }
+                }
+            } catch (error) {
+                console.error('Cross-storage test error:', error);
+                showError('cross-storage-result', `Test failed with error: ${error.message}`);
+            }
+        }
+
+        /**
+         * Save a key to the local storage history
+         * @param {string} keyName - Name of the key
+         * @param {string} keyType - Type of the key (AES, RSA, etc.)
+         * @param {string} keyLength - Length of the key in bits
+         */
+        function saveKeyToHistory(keyName, keyType, keyLength) {
+            try {
+                // Get existing keys from local storage
+                let keyHistory = JSON.parse(localStorage.getItem('keyVaultKeyHistory') || '[]');
+                
+                // Check if this key already exists
+                const existingIndex = keyHistory.findIndex(k => k.name === keyName);
+                if (existingIndex >= 0) {
+                    // Update existing key
+                    keyHistory[existingIndex] = {
+                        name: keyName,
+                        type: keyType,
+                        length: keyLength,
+                        category: determineKeyCategory(keyName),
+                        timestamp: new Date().toISOString()
+                    };
+                } else {
+                    // Add new key
+                    keyHistory.push({
+                        name: keyName,
+                        type: keyType,
+                        length: keyLength,
+                        category: determineKeyCategory(keyName),
+                        timestamp: new Date().toISOString()
+                    });
+                }
+                
+                // Sort by most recent first
+                keyHistory.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                // Save back to local storage
+                localStorage.setItem('keyVaultKeyHistory', JSON.stringify(keyHistory));
+                
+                console.log(`Saved key "${keyName}" to history. Total keys: ${keyHistory.length}`);
+            } catch (error) {
+                console.error('Error saving key to history:', error);
+            }
+        }
+        
+        /**
+         * Determine the category of a key based on its name
+         * @param {string} keyName - Name of the key
+         * @returns {string} - Category of the key
+         */
+        function determineKeyCategory(keyName) {
+            const lowerName = keyName.toLowerCase();
+            if (lowerName.includes('client') || lowerName.includes('c223') || lowerName.includes('sprint')) {
+                return 'client';
+            } else if (lowerName.includes('custom') || lowerName.includes('my-') || lowerName.includes('mvp')) {
+                return 'custom';
+            } else {
+                return 'default';
+            }
+        }
+
+        /**
+         * List all available keys in the system
+         * @param {string} elementId - Element ID where to display results
+         */
+        async function listAllKeys(elementId = 'retrieve-result') {
+            showLoading(elementId);
+            
+            try {
+                // Default keys that should always be available
+                const defaultKeys = [
+                    { name: 'test-key', type: 'AES', category: 'default' },
+                    { name: 'test-key-c223', type: 'AES', category: 'client' },
+                    { name: 'my-test-key', type: 'AES', category: 'custom' },
+                    { name: 'aes-key', type: 'AES', category: 'default' },
+                    { name: 'client-key-1', type: 'AES', category: 'client' },
+                    { name: 'secure-key-256', type: 'AES', category: 'custom' },
+                    { name: 'mvp-key', type: 'AES', category: 'default' },
+                    { name: 'sprint-key', type: 'AES', category: 'client' }
+                ];
+                
+                // Get historical keys from local storage
+                let historicalKeys = [];
+                try {
+                    const storedKeys = JSON.parse(localStorage.getItem('keyVaultKeyHistory') || '[]');
+                    historicalKeys = storedKeys.map(k => ({
+                        name: k.name,
+                        type: k.type || 'AES',
+                        category: k.category || determineKeyCategory(k.name),
+                        timestamp: k.timestamp,
+                        isHistorical: true
+                    }));
+                    console.log(`Loaded ${historicalKeys.length} keys from history`);
+                } catch (error) {
+                    console.error('Error loading keys from history:', error);
+                }
+                
+                // Combine default and historical keys, removing duplicates
+                const allKeys = [...defaultKeys];
+                
+                // Add historical keys that don't exist in default keys
+                historicalKeys.forEach(histKey => {
+                    if (!allKeys.some(k => k.name === histKey.name)) {
+                        allKeys.push(histKey);
+                    }
+                });
+                
+                // Sort keys: historical first, then alphabetically
+                allKeys.sort((a, b) => {
+                    // Historical keys first
+                    if (a.isHistorical && !b.isHistorical) return -1;
+                    if (!a.isHistorical && b.isHistorical) return 1;
+                    // Then alphabetically
+                    return a.name.localeCompare(b.name);
+                });
+                
+                // If we're displaying in the keys-list div, use a better format with classes
+                if (elementId === 'keys-list') {
+                    let html = '';
+                    
+                    // Add a heading for historical keys if any exist
+                    if (historicalKeys.length > 0) {
+                        html += `<div style="font-weight: bold; margin: 5px 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 3px;">Recently Generated Keys</div>`;
+                        
+                        // Add historical keys first (limited to most recent 5)
+                        historicalKeys.slice(0, 5).forEach(key => {
+                            const categoryClass = key.category === 'default' ? 'key-button-default' : 
+                                                key.category === 'client' ? 'key-button-client' : 
+                                                'key-button-custom';
+                            
+                            html += `
+                            <div class="key-button ${categoryClass}" onclick="directDecrypt('${key.name}')" title="Generated: ${new Date(key.timestamp).toLocaleString()}">
+                                <span style="margin-right: 8px; font-size: 16px;">🔑</span>
+                                <span style="flex-grow: 1;">${key.name}</span>
+                                <span style="color: #666; font-size: 13px;">${key.category}</span>
+                            </div>`;
+                        });
+                        
+                        html += `<div style="font-weight: bold; margin: 8px 0 5px; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 3px;">Standard Keys</div>`;
+                    }
+                    
+                    // Add default keys
+                    defaultKeys.forEach(key => {
+                        // Skip if this key is already in the historical keys section
+                        if (historicalKeys.some(k => k.name === key.name)) {
+                            return;
+                        }
+                        
+                        const categoryClass = key.category === 'default' ? 'key-button-default' : 
+                                            key.category === 'client' ? 'key-button-client' : 
+                                            'key-button-custom';
+                        
+                        html += `
+                        <div class="key-button ${categoryClass}" onclick="directDecrypt('${key.name}')">
+                            <span style="margin-right: 8px; font-size: 16px;">🔑</span>
+                            <span style="flex-grow: 1;">${key.name}</span>
+                            <span style="color: #666; font-size: 13px;">${key.category}</span>
+                        </div>`;
+                    });
+                    
+                    document.getElementById(elementId).innerHTML = html;
+                    return;
+                }
+                
+                // Otherwise use the table format
+                let html = `
+                    <div class="success">Available encryption keys:</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Key Name</th>
+                                <th>Type</th>
+                                <th>Category</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                allKeys.forEach(key => {
+                    const timestamp = key.timestamp ? `<br><small>Generated: ${new Date(key.timestamp).toLocaleString()}</small>` : '';
+                    
+                    html += `
+                        <tr>
+                            <td>${key.name}${timestamp}</td>
+                            <td>${key.type || 'Unknown'}</td>
+                            <td>${key.category || 'general'}</td>
+                            <td>
+                                <button onclick="document.getElementById('retrieve-key-name').value='${key.name}'; retrieveSelectedDocument();">
+                                    Use this key
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                        </tbody>
+                    </table>
+                `;
+                
+                document.getElementById(elementId).innerHTML = html;
+            } catch (error) {
+                showError(elementId, `Error listing keys: ${error.message}`);
+            }
+        }
+        
+        /**
+         * Loads files from the selected storage location into the file select dropdown
+         */
+        async function loadFilesForRetrieval() {
+            const storageCode = document.getElementById('retrieve-storage').value;
+            const fileSelect = document.getElementById('file-select');
+            
+            // Show loading message with animation
+            fileSelect.innerHTML = '<option disabled selected>⏳ Loading files...</option>';
+            
+            // Also show a notification in the result area
+            showLoading('retrieve-result');
+            document.getElementById('retrieve-result').innerHTML = '<div class="loading"></div> Loading files from storage...';
+            
+            try {
+                const endpoint = storageCode ? `/listFiles?storageCode=${storageCode}` : '/listFiles';
+                console.log(`Loading files from endpoint: ${endpoint}`);
+                
+                const result = await makeApiRequest(endpoint);
+                
+                if (result.success && result.data.files) {
+                    // Clear the loading message
+                    fileSelect.innerHTML = '';
+                    
+                    if (result.data.files.length === 0) {
+                        fileSelect.innerHTML = '<option disabled selected>No files found in this storage</option>';
+                        document.getElementById('retrieve-result').innerHTML = '<div class="error">No files found in the selected storage location.</div>';
+                    } else {
+                        // Add option for each file
+                        result.data.files.forEach(file => {
+                            const option = document.createElement('option');
+                            option.value = file.name;
+                            option.text = file.name + (file.size ? ` (${(file.size / 1024).toFixed(2)} KB)` : '');
+                            fileSelect.appendChild(option);
+                        });
+                        
+                        // Select the first file by default
+                        if (fileSelect.options.length > 0) {
+                            fileSelect.selectedIndex = 0;
+                        }
+                        
+                        // Show success message
+                        document.getElementById('retrieve-result').innerHTML = 
+                            `<div class="success">✅ Loaded ${result.data.files.length} files from storage. Now select a file and click a key to decrypt.</div>`;
+                    }
+                } else {
+                    fileSelect.innerHTML = '<option disabled selected>Error loading files</option>';
+                    document.getElementById('retrieve-result').innerHTML = 
+                        `<div class="error">Failed to load files: ${result.error || 'Unknown error'}</div>`;
+                    console.error('Failed to load files:', result);
+                }
+            } catch (error) {
+                fileSelect.innerHTML = '<option disabled selected>Error loading files</option>';
+                document.getElementById('retrieve-result').innerHTML = 
+                    `<div class="error">Error loading files: ${error.message}</div>`;
+                console.error('Error loading files:', error);
+            }
+        }
+        
+        /**
+         * Updated retrieve document function to work with the file selection UI
+         */
+        async function retrieveSelectedDocument() {
+            const fileSelect = document.getElementById('file-select');
+            const keyName = document.getElementById('retrieve-key-name').value.trim();
+            const storageCode = document.getElementById('retrieve-storage').value;
+            
+            if (fileSelect.selectedIndex === -1 || fileSelect.options[fileSelect.selectedIndex].disabled) {
+                showError('retrieve-result', 'Please select a file from the list');
+                return;
+            }
+            
+            const fileName = fileSelect.options[fileSelect.selectedIndex].value;
+            
+            if (!keyName) {
+                showError('retrieve-result', 'Key name is required');
+                return;
+            }
+            
+            // Use the existing function with the selected values
+            retrieveDocument(fileName, keyName, storageCode);
+        }
+
+        // Tab switching functionality
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Remove active class from all tabs
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked tab
+                this.classList.add('active');
+                
+                // Show corresponding content
+                const tabId = this.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+
+        // Initialize event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Storage info tab
+            document.getElementById('list-storage-locations').addEventListener('click', listStorageLocations);
+            document.getElementById('list-all-files').addEventListener('click', listAllFiles);
+            
+            // Key management tab
+            document.getElementById('generate-key').addEventListener('click', generateKey);
+            document.getElementById('retrieve-key').addEventListener('click', retrieveKey);
+            
+            // File operations tab
+            document.getElementById('encrypt-data').addEventListener('click', encryptData);
+            document.getElementById('decrypt-data').addEventListener('click', decryptData);
+            
+            // Multi-storage tests tab
+            document.getElementById('list-files-by-storage').addEventListener('click', listFilesByStorage);
+            document.getElementById('download-file').addEventListener('click', function() {
+                downloadFile(null, null); // Will use form values
+            });
+            document.getElementById('retrieve-document').addEventListener('click', function() {
+                retrieveSelectedDocument(); // Use the new function for the improved UI
+            });
+            document.getElementById('cross-storage-test').addEventListener('click', crossStorageTest);
+            
+            // List keys button
+            document.getElementById('list-keys-button').addEventListener('click', function() {
+                listAllKeys('keys-list'); // Display in the compact keys list div
+            });
+            
+            // Load files button
+            document.getElementById('list-files-for-retrieve').addEventListener('click', loadFilesForRetrieval);
+            
+            // Also load files when storage location changes
+            document.getElementById('retrieve-storage').addEventListener('change', function() {
+                // Automatically load files when storage is selected
+                loadFilesForRetrieval();
+            });
+            
+            // Expose functions for inline use
+            window.downloadFile = downloadFile;
+            window.retrieveDocument = retrieveDocument;
+            window.retrieveSelectedDocument = retrieveSelectedDocument;
+            window.loadFilesForRetrieval = loadFilesForRetrieval;
+            window.crossStorageTest = crossStorageTest;
+            
+            // Load storage locations on page load
+            listStorageLocations();
+            
+            // Also show available keys on page load
+            listAllKeys('keys-list');
+            
+            // Load files for the default storage
+            setTimeout(loadFilesForRetrieval, 500);
+            
+            // Add enter key handler for custom key input
+            const customKeyInput = document.getElementById('custom-key-input');
+            if (customKeyInput) {
+                customKeyInput.addEventListener('keypress', function(event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        useCustomKey();
+                    }
+                });
+            }
+            
+            // Expose custom key function
+            window.useCustomKey = useCustomKey;
+        });
+        
+        // Direct script to handle button clicks - fallback approach
+        document.getElementById('retrieve-document').onclick = function() {
+            console.log('Direct click handler triggered');
+            const fileSelect = document.getElementById('file-select');
+            const keyName = document.getElementById('retrieve-key-name').value.trim();
+            const storageCode = document.getElementById('retrieve-storage').value;
+            
+            if (fileSelect.selectedIndex === -1 || fileSelect.options[fileSelect.selectedIndex].disabled) {
+                alert('Please select a file from the list');
+                return;
+            }
+            
+            const fileName = fileSelect.options[fileSelect.selectedIndex].value;
+            
+            if (!keyName) {
+                alert('Key name is required');
+                return;
+            }
+            
+            console.log(`Attempting retrieval with: file=${fileName}, key=${keyName}, storage=${storageCode}`);
+            retrieveDocument(fileName, keyName, storageCode);
+        };
+        
+        document.getElementById('list-files-for-retrieve').onclick = function() {
+            console.log('Load files clicked');
+            loadFilesForRetrieval();
+        };
+
+        // Add file selection change handler to determine key
+        document.getElementById('file-select').addEventListener('change', function() {
+            if (this.selectedIndex > -1 && !this.options[this.selectedIndex].disabled) {
+                const fileName = this.options[this.selectedIndex].value;
+                // Try to determine an appropriate key based on filename pattern
+                if (fileName.includes('Sprint') || fileName.includes('sprint')) {
+                    document.getElementById('retrieve-key-name').value = 'test-key-c223';
+                } else if (fileName.includes('MVP') || fileName.includes('mvp')) {
+                    document.getElementById('retrieve-key-name').value = 'my-test-key';
+                } else {
+                    document.getElementById('retrieve-key-name').value = 'test-key';
+                }
+                
+                console.log(`Selected file: ${fileName}, suggested key: ${document.getElementById('retrieve-key-name').value}`);
+            }
+        });
+
+        /**
+         * Directly retrieves and decrypts a document using the selected file and provided key
+         * @param {string} keyName - The key to use for decryption
+         */
+        function directDecrypt(keyName) {
+            const fileSelect = document.getElementById('file-select');
+            const storageCode = document.getElementById('retrieve-storage').value;
+            
+            if (fileSelect.selectedIndex === -1 || fileSelect.options[fileSelect.selectedIndex].disabled) {
+                showError('retrieve-result', 'Please select a file from the list first');
+                return;
+            }
+            
+            const fileName = fileSelect.options[fileSelect.selectedIndex].value;
+            
+            console.log(`Direct decrypt: file=${fileName}, key=${keyName}, storage=${storageCode}`);
+            showLoading('retrieve-result');
+            document.getElementById('retrieve-result').innerHTML = '<div class="loading"></div> Decrypting document...';
+            
+            // Get expected original filename (without .enc if present)
+            let originalFileName = fileName;
+            if (originalFileName.toLowerCase().endsWith('.enc')) {
+                originalFileName = originalFileName.slice(0, -4);
+            } else {
+                // If .enc extension is missing, add it for the API request
+                // but keep the original file name for later reference
+                fileName = fileName; // Don't modify the original filename
+                console.log(`File name used as-is: ${fileName}`);
+            }
+            
+            console.log(`Original file name: ${originalFileName}`);
+            console.log(`Actual file name for API: ${fileName}`);
+            
+            // Try a more direct approach without using URLSearchParams
+            // Manually encode each parameter to ensure proper handling of special characters
+            const encodedFileName = encodeURIComponent(fileName);
+            const encodedKeyName = encodeURIComponent(keyName);
+            
+            let endpoint = `/retrieveDocument?documentName=${encodedFileName}&keyName=${encodedKeyName}`;
+            
+            // Ensure storageCode is always included when available
+            if (storageCode) {
+                endpoint += `&storageCode=${encodeURIComponent(storageCode)}`;
+            }
+            
+            console.log(`Manual endpoint construction: ${endpoint}`);
+            console.log(`Full API URL: ${document.getElementById('api-url').value.trim()}${endpoint}`);
+            
+            // Make the API request
+            makeApiRequest(endpoint).then(result => {
+                if (result.success) {
+                    // Get the original name from the API response headers if available
+                    let downloadFilename = '';
+                    
+                    // First try to get the filename from the response headers
+                    if (result.headers && result.headers['X-Original-Name']) {
+                        downloadFilename = result.headers['X-Original-Name'];
+                        console.log(`Using original name from header: ${downloadFilename}`);
+                    } 
+                    // Next, try the filename returned by the API
+                    else if (result.filename) {
+                        downloadFilename = result.filename;
+                        console.log(`Using filename from API result: ${downloadFilename}`);
+                    } 
+                    // Otherwise, use our manually processed filename by removing .enc
+                    else if (fileName.toLowerCase().endsWith('.enc')) {
+                        downloadFilename = fileName.slice(0, -4);
+                        console.log(`Manually removed .enc extension: ${downloadFilename}`);
+                    } 
+                    // Fallback to the original name without processing
+                    else {
+                        downloadFilename = originalFileName;
+                        console.log(`Using original filename: ${downloadFilename}`);
+                    }
+                    
+                    console.log(`Final download filename: ${downloadFilename}`);
+                    
+                    showSuccess(
+                        'retrieve-result', 
+                        `✅ Document decrypted successfully!`
+                    );
+                    
+                    // Initialize download
+                    const downloadUrl = URL.createObjectURL(result.blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = downloadFilename;
+                    a.className = 'download-link';
+                    a.innerHTML = '<span style="font-size: 20px;">⬇️</span> Download ' + downloadFilename;
+                    a.style.display = 'block';
+                    a.style.marginTop = '15px';
+                    a.style.textAlign = 'center';
+                    a.style.padding = '12px';
+                    a.style.backgroundColor = '#28a745';
+                    a.style.color = 'white';
+                    a.style.textDecoration = 'none';
+                    a.style.borderRadius = '4px';
+                    a.style.fontWeight = 'bold';
+                    
+                    document.getElementById('retrieve-result').appendChild(a);
+                } else {
+                    // Show specific error message
+                    const errorMsg = result.error || 'Unknown error';
+                    if (errorMsg.includes("bad decrypt")) {
+                        showError('retrieve-result', `Decryption failed: Wrong key. Please try a different key.`);
+                    } else if (errorMsg.includes("not found") || errorMsg.includes("Document not found")) {
+                        showError('retrieve-result', `<strong>File not found:</strong> "${fileName}" not found in the selected storage.
+                        <br><br>
+                        <strong>Possible solutions:</strong>
+                        <ul>
+                          <li>Make sure you've selected the correct storage location</li>
+                          <li>Try with a different filename format (with or without spaces/parentheses)</li>
+                          <li>Check if the file was uploaded to a different storage location</li>
+                        </ul>`);
+                    } else {
+                        showError('retrieve-result', `Retrieval failed: ${errorMsg}`);
+                    }
+                }
+            }).catch(error => {
+                showError('retrieve-result', `Error: ${error.message}`);
+            });
+        }
+
+        // Add direct handler for cross-storage test button
+        document.getElementById('cross-storage-test').onclick = function() {
+            console.log('Cross-storage test button clicked');
+            crossStorageTest();
+        };
+
+        /**
+         * Uses a custom key entered by the user
+         */
+        function useCustomKey() {
+            const customKeyInput = document.getElementById('custom-key-input');
+            const keyName = customKeyInput.value.trim();
+            
+            if (!keyName) {
+                showError('retrieve-result', 'Please enter a key name');
+                return;
+            }
+            
+            console.log(`Using custom key: ${keyName}`);
+            
+            // Save the key to history for future use
+            saveKeyToHistory(keyName, 'AES', '256');
+            
+            // Use the key for decryption
+            directDecrypt(keyName);
+            
+            // Clear the input field
+            customKeyInput.value = '';
+        }
+    </script>
+</body>
+</html>
